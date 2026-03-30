@@ -139,6 +139,7 @@ all : $(X_NAME)
 
 $(X_NAME) : $(X_OBJS)
 	@echo [LD] Linking $@.elf
+	@if not exist $(X_OUT) $(MKDIR) $(X_OUT)
 	@$(CC) $(X_LDFLAGS) $(X_LIBDIRS) -Wl,--cref,-Map=$@.map $(X_OBJS) -o $@.elf $(X_LIBS)
 	@echo [OC] Objcopying $@.bin
 	@$(OC) $(X_OCFLAGS) $@.elf $@.bin
