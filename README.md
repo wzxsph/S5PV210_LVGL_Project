@@ -1,51 +1,60 @@
 # S5PV210 Bare-metal LVGL Project
 
-This repository provides a high-performance, modular bare-metal port of **LVGL v8.3** for the **Samsung S5PV210** (Cortex-A8) development board (e.g., X210/Smart210).
+This repository provides a high-performance, modular bare-metal port of **LVGL v8.3** for the **Samsung S5PV210** (Cortex-A8) development board.
 
 ## 🚀 Key Features
-- **Modern Architecture**: Clean separation of `arch`, `bsp`, `app`, and `porting` layers.
-- **Optimized Display**: Custom FIMD (LCD) driver configured for **16-bit (RGB565)** color depth for high frame rates and lower memory bandwidth.
-- **Precise Timing**: 1ms PWM4 system-tick integrated with LVGL's custom tick expression.
-- **Cross-Platform Build**: Robust Makefile compatible with both Windows and Linux using `arm-none-eabi-gcc`.
-- **Self-Contained**: LVGL v8.3 source is bundled directly for "clone and build" convenience.
+- **Modern Architecture**: Modular structure with `arch`, `bsp`, `app`, and `porting` layers.
+- **16-bit Optimized**: FIMD driver configured for **RGB565** (16bpp) for maximum performance.
+- **U-Boot Support**: Fine-tuned for jumping from U-Boot (addresses PLL/clock re-init issues).
+- **Embedded Diagnostics**: Early serial output for hardware troubleshooting.
 
-## 🛠️ Build Requirements
-- **Toolchain**: `arm-none-eabi-gcc` (Recommendation: version 10.3 or higher).
-- **Build Tool**: `make` (Windows users can use Git Bash or MinGW-make).
+## 🛠️ Installation & Dependency Setup
+
+The project source code does NOT include the LVGL library to keep the repository lightweight. You must set it up manually:
+
+### 1. Download LVGL
+Clone or download **LVGL v8.3** into the project root:
+
+```bash
+# From the project root
+git clone -b release/v8.3 https://github.com/lvgl/lvgl.git
+```
+
+### 2. Project Structure
+Ensure your directory looks like this:
+```text
+S5PV210_LVGL_Project/
+├── app/          # UI Logic
+├── arch/         # Startup and Clock
+├── bsp/          # LCD, Serial, Timer Drivers
+├── lvgl/         # <--- Place LVGL source here
+├── porting/      # LVGL <-> Hardware Bridge
+├── lv_conf.h     # LVGL Config
+├── Makefile
+└── s5pv210.lds
+```
 
 ## 🔨 How to Build
-1. Clone the repository:
+1. **Toolchain**: Ensure `arm-none-eabi-gcc` is in your PATH.
+2. **Compile**:
    ```bash
-   git clone https://github.com/wzxsph/S5PV210_LVGL_Project.git
-   cd S5PV210_LVGL_Project
-   ```
-2. Compile:
-   ```bash
+   make clean
    make
    ```
-3. Find your firmware in the `output/` directory:
-   - `s5pv210_lvgl_demo.bin`: Raw binary for flashing.
-   - `s5pv210_lvgl_demo.elf`: ELF file with debug symbols.
+3. **Output**: Your firmware will be generated in `output/s5pv210_lvgl_demo.bin`.
 
-## 📼 Flashing and Running
-### Method 1: USB Download (DNW)
-1. Enter U-Boot on your board.
-2. Execute `dnw 30000000` via serial terminal.
-3. Use the **DNW tool** to send `output/s5pv210_lvgl_demo.bin`.
-4. Run: `go 30000000`.
+## 📼 Flashing (TFTP Example)
+If your board is running U-Boot:
+1. Connect via Serial and Ethernet.
+2. In U-Boot terminal:
+   ```bash
+   tftp 30000000 s5pv210_lvgl_demo.bin
+   go 30000000
+   ```
 
-### Method 2: SD Card Boot
-1. Add the S5PV210 boot header using `mkv210` tool.
-2. Burn to SD card using an SD card burner tool.
-3. Set your board boot switch to SD mode.
+## 📝 Important Notes
+- **Heap Size**: The internal heap is set to **4MB** (in `library/malloc/malloc.c`) to ensure fast boot and stability.
+- **Clock init**: When booting from TFTP/U-Boot, clock initialization is skipped in `main.c` to prevent hardware hangs.
 
-## 📁 Directory Structure
-- `arch/`: CPU startup (`start.S`), clock, and interrupt handling.
-- `bsp/`: Hardware drivers (LCD, UART, Timer).
-- `app/`: Application logic (`main.c`) and UI code.
-- `porting/`: LVGL display and input device bridges.
-- `lvgl/`: LVGL v8.3 core source files.
-- `include/`: Common headers and library support.
-
-## 📝 Author
+## Author
 [wzxsph](https://github.com/wzxsph)
