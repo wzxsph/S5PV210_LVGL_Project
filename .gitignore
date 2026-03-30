@@ -1,0 +1,12 @@
+.obj/
+output/
+*.log
+*.elf
+*.bin
+*.map
+.vscode/
+.cproject
+.project
+pyout.txt
+errlog.txt
+build_full.log
