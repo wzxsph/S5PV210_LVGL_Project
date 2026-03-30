@@ -10,3 +10,6 @@ output/
 pyout.txt
 errlog.txt
 build_full.log
+
+# Third-party libraries (not uploaded)
+lvgl/
