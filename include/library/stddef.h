@@ -5,11 +5,6 @@
 extern "C" {
 #endif
 
-/*
- * Include types.h to get size_t, ptrdiff_t, ssize_t etc.
- * This is needed because LVGL and the GCC toolchain headers
- * expect these types to be available from <stddef.h>.
- */
 #include <types.h>
 
 #if defined(__cplusplus)
@@ -24,12 +19,10 @@ extern "C" {
 #define offsetof(type, field)	((size_t)(&((type *)0)->field))
 #endif
 
-#ifndef __WCHAR_T_DEFINED
-#define __WCHAR_T_DEFINED
-#ifndef __cplusplus
-typedef unsigned int wchar_t;
+#ifndef __WCHAR_TYPE__
+#define __WCHAR_TYPE__ int
 #endif
-#endif
+typedef __WCHAR_TYPE__ wchar_t;
 
 enum {
 	FALSE	= 0,

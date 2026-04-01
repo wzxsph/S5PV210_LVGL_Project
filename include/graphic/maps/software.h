@@ -8,10 +8,10 @@ extern "C" {
 #include <types.h>
 #include <graphic/surface.h>
 
-extern inline u8_t * surface_sw_get_pointer(struct surface_t * surface, s32_t x, s32_t y);
-extern inline u32_t surface_sw_get_pixel(struct surface_t * surface, s32_t x, s32_t y);
-extern inline void surface_sw_set_pixel(struct surface_t * surface, s32_t x, s32_t y, u32_t c);
-extern inline void surface_sw_set_pixel_with_alpha(struct surface_t * surface, s32_t x, s32_t y, u32_t c);
+extern u8_t * surface_sw_get_pointer(struct surface_t * surface, s32_t x, s32_t y);
+extern u32_t surface_sw_get_pixel(struct surface_t * surface, s32_t x, s32_t y);
+extern void surface_sw_set_pixel(struct surface_t * surface, s32_t x, s32_t y, u32_t c);
+extern void surface_sw_set_pixel_with_alpha(struct surface_t * surface, s32_t x, s32_t y, u32_t c);
 
 bool_t map_software_point(struct surface_t * surface, s32_t x, s32_t y, u32_t c, enum blend_mode mode);
 bool_t map_software_hline(struct surface_t * surface, s32_t x0, s32_t y0, u32_t x1, u32_t c, enum blend_mode mode);

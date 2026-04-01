@@ -53,11 +53,17 @@ extern "C" {
 
 
 /* Minimum and maximum values a 'max int' can hold */
+#ifndef INTMAX_MIN
 #define INTMAX_MIN		LLONG_MIN
+#endif
+#ifndef INTMAX_MAX
 #define INTMAX_MAX		LLONG_MAX
+#endif
 
 /* Maximum value an 'max uint' can hold (Minimum is 0) */
+#ifndef UINTMAX_MAX
 #define UINTMAX_MAX		ULLONG_MAX
+#endif
 
 #ifdef __cplusplus
 }
