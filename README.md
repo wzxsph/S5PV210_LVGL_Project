@@ -1,5 +1,9 @@
 # S5PV210 Bare-metal LVGL Project
 
+> [!CAUTION]
+> **本代码还未完成调试，正在进行中，请勿参考！**
+> **This code is still under debugging and is NOT yet complete. DO NOT refer to it.**
+
 This repository provides a high-performance, modular bare-metal port of **LVGL v8.3** for the **Samsung S5PV210** (Cortex-A8) development board.
 
 ## 🚀 Key Features
