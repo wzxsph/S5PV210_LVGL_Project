@@ -1,0 +1,299 @@
+#
+# Makefile for module.
+#
+
+CROSS		?= arm-none-eabi-
+NAME		:= template-framebuffer-gui
+
+#
+# System environment variable.
+#
+ifeq ($(OS),Windows_NT)
+HOSTOS		:= windows
+else
+ifneq (,$(findstring Linux, $(shell uname -s)))
+HOSTOS		:= linux
+endif
+ifneq (,$(findstring windows, $(shell uname -s)))
+HOSTOS		:= windows
+endif
+endif
+
+ifeq ($(strip $(HOSTOS)),)
+$(error unable to determine host operation system)
+endif
+
+#
+# Load variables of flag.Makefile
+#
+ASFLAGS		:= -g -ggdb -Wall -O3
+CFLAGS		:= -g -ggdb -Wall -O3 -Wno-unused-function -Wno-unused-variable -Wno-missing-field-initializers
+CXXFLAGS	:= -g -ggdb -Wall -O3
+LDFLAGS		:= -T link.ld -nostdlib -static
+ARFLAGS		:= -rcs
+OCFLAGS		:= -v -O binary
+ODFLAGS		:=
+MCFLAGS		:= -mcpu=cortex-a8 -mtune=cortex-a8  -mfpu=neon -ftree-vectorize -ffast-math -mfloat-abi=softfp
+
+LIBDIRS		:=
+LIBS 		:=
+INCDIRS		:=
+SRCDIRS		:=
+
+#
+# Add necessary directory for INCDIRS and SRCDIRS.
+#
+INCDIRS		+= include \
+			   include/hardware \
+			   include/library
+SRCDIRS		+= source \
+			   source/startup \
+			   source/hardware \
+			   source/arm \
+			   source/library \
+			   source/library/ctype \
+			   source/library/errno \
+			   source/library/exit \
+			   source/library/malloc \
+			   source/library/stdlib \
+			   source/library/string \
+			   source/library/stdio \
+			   source/library/math \
+			   source/graphic \
+			   source/graphic/maps/software
+
+#
+# Add external library
+#
+INCDIRS		+= source/gui
+SRCDIRS		+= source/gui
+
+#
+# LVGL include paths
+#
+INCDIRS		+= . \
+			   lvgl \
+			   lvgl/src
+
+#
+# LVGL source directories
+#
+SRCDIRS		+= lvgl/src \
+			   lvgl/src/core \
+			   lvgl/src/display \
+			   lvgl/src/draw \
+			   lvgl/src/draw/sw \
+			   lvgl/src/draw/sw/blend \
+			   lvgl/src/draw/sw/blend/neon \
+			   lvgl/src/draw/sw/blend/helium \
+			   lvgl/src/draw/sw/arm2d \
+			   lvgl/src/draw/convert \
+			   lvgl/src/draw/convert/neon \
+			   lvgl/src/draw/convert/helium \
+			   lvgl/src/draw/snapshot \
+			   lvgl/src/draw/vg_lite \
+			   lvgl/src/draw/dma2d \
+			   lvgl/src/draw/opengles \
+			   lvgl/src/draw/sdl \
+			   lvgl/src/draw/nema_gfx \
+			   lvgl/src/draw/nxp \
+			   lvgl/src/draw/nxp/pxp \
+			   lvgl/src/draw/nxp/g2d \
+			   lvgl/src/draw/renesas \
+			   lvgl/src/draw/renesas/dave2d \
+			   lvgl/src/draw/eve \
+			   lvgl/src/draw/nanovg \
+			   lvgl/src/draw/espressif \
+			   lvgl/src/draw/espressif/ppa \
+			   lvgl/src/font \
+			   lvgl/src/font/fmt_txt \
+			   lvgl/src/font/binfont_loader \
+			   lvgl/src/font/font_manager \
+			   lvgl/src/font/imgfont \
+			   lvgl/src/indev \
+			   lvgl/src/layouts \
+			   lvgl/src/layouts/flex \
+			   lvgl/src/layouts/grid \
+			   lvgl/src/libs/bin_decoder \
+			   lvgl/src/libs/barcode \
+			   lvgl/src/libs/bmp \
+			   lvgl/src/libs/ffmpeg \
+			   lvgl/src/libs/freetype \
+			   lvgl/src/libs/fsdrv \
+			   lvgl/src/libs/gif \
+			   lvgl/src/libs/libjpeg_turbo \
+			   lvgl/src/libs/libpng \
+			   lvgl/src/libs/libwebp \
+			   lvgl/src/libs/lodepng \
+			   lvgl/src/libs/lz4 \
+			   lvgl/src/libs/qrcode \
+			   lvgl/src/libs/rle \
+			   lvgl/src/libs/rlottie \
+			   lvgl/src/libs/svg \
+			   lvgl/src/libs/thorvg \
+			   lvgl/src/libs/tiny_ttf \
+			   lvgl/src/libs/tjpgd \
+			   lvgl/src/misc \
+			   lvgl/src/misc/cache \
+			   lvgl/src/misc/cache/class \
+			   lvgl/src/misc/cache/instance \
+			   lvgl/src/osal \
+			   lvgl/src/others \
+			   lvgl/src/others/file_explorer \
+			   lvgl/src/others/fragment \
+			   lvgl/src/others/translation \
+			   lvgl/src/stdlib \
+			   lvgl/src/stdlib/builtin \
+			   lvgl/src/stdlib/clib \
+			   lvgl/src/themes \
+			   lvgl/src/themes/default \
+			   lvgl/src/themes/mono \
+			   lvgl/src/themes/simple \
+			   lvgl/src/tick \
+			   lvgl/src/widgets/animimage \
+			   lvgl/src/widgets/arc \
+			   lvgl/src/widgets/arclabel \
+			   lvgl/src/widgets/bar \
+			   lvgl/src/widgets/button \
+			   lvgl/src/widgets/buttonmatrix \
+			   lvgl/src/widgets/calendar \
+			   lvgl/src/widgets/canvas \
+			   lvgl/src/widgets/chart \
+			   lvgl/src/widgets/checkbox \
+			   lvgl/src/widgets/dropdown \
+			   lvgl/src/widgets/gif \
+			   lvgl/src/widgets/image \
+			   lvgl/src/widgets/imagebutton \
+			   lvgl/src/widgets/ime \
+			   lvgl/src/widgets/keyboard \
+			   lvgl/src/widgets/label \
+			   lvgl/src/widgets/led \
+			   lvgl/src/widgets/line \
+			   lvgl/src/widgets/list \
+			   lvgl/src/widgets/lottie \
+			   lvgl/src/widgets/menu \
+			   lvgl/src/widgets/msgbox \
+			   lvgl/src/widgets/objx_templ \
+			   lvgl/src/widgets/property \
+			   lvgl/src/widgets/roller \
+			   lvgl/src/widgets/scale \
+			   lvgl/src/widgets/slider \
+			   lvgl/src/widgets/span \
+			   lvgl/src/widgets/spinbox \
+			   lvgl/src/widgets/spinner \
+			   lvgl/src/widgets/switch \
+			   lvgl/src/widgets/table \
+			   lvgl/src/widgets/tabview \
+			   lvgl/src/widgets/textarea \
+			   lvgl/src/widgets/tileview \
+			   lvgl/src/widgets/win \
+			   lvgl/src/widgets/3dtexture \
+			   lvgl/src/debugging \
+			   lvgl/src/debugging/monkey \
+			   lvgl/src/debugging/sysmon \
+			   lvgl/src/debugging/test \
+			   lvgl/src/drivers \
+			   lvgl/src/drivers/display \
+			   lvgl/src/drivers/display/lcd
+
+#
+# You shouldn't need to change anything below this point.
+#
+AS			:= $(CROSS)gcc -x assembler-with-cpp
+CC			:= $(CROSS)gcc
+CXX			:= $(CROSS)g++
+LD			:= $(CROSS)ld
+AR			:= $(CROSS)ar
+OC			:= $(CROSS)objcopy
+OD			:= $(CROSS)objdump
+ifeq ($(HOSTOS),windows)
+MKDIR		:= mkdir
+CP			:= copy
+RM			:= del /Q /F
+else
+MKDIR		:= mkdir -p
+CP			:= cp -af
+RM			:= rm -fr
+endif
+CD			:= cd
+FIND		:= find
+
+#
+# X variables
+#
+X_ASFLAGS	:= $(MCFLAGS) $(ASFLAGS)
+X_CFLAGS	:= $(MCFLAGS) $(CFLAGS)
+X_CXXFLAGS	:= $(MCFLAGS) $(CXXFLAGS)
+X_LDFLAGS	:= $(LDFLAGS)
+X_OCFLAGS	:= $(OCFLAGS)
+X_LIBDIRS	:= $(LIBDIRS)
+X_LIBS		:= $(LIBS) -lgcc
+
+X_OUT		:= output
+X_NAME		:= $(patsubst %, $(X_OUT)/%, $(NAME))
+X_INCDIRS	:= $(patsubst %, -I %, $(INCDIRS))
+X_SRCDIRS	:= $(patsubst %, %, $(SRCDIRS))
+X_OBJDIRS	:= $(patsubst %, .obj/%, $(X_SRCDIRS))
+
+X_SFILES	:= $(foreach dir, $(X_SRCDIRS), $(wildcard $(dir)/*.S))
+X_CFILES	:= $(foreach dir, $(X_SRCDIRS), $(wildcard $(dir)/*.c))
+X_CPPFILES	:= $(foreach dir, $(X_SRCDIRS), $(wildcard $(dir)/*.cpp))
+
+X_SDEPS		:= $(patsubst %, .obj/%, $(X_SFILES:.S=.o.d))
+X_CDEPS		:= $(patsubst %, .obj/%, $(X_CFILES:.c=.o.d))
+X_CPPDEPS	:= $(patsubst %, .obj/%, $(X_CPPFILES:.cpp=.o.d))
+X_DEPS		:= $(X_SDEPS) $(X_CDEPS) $(X_CPPDEPS)
+
+X_SOBJS		:= $(patsubst %, .obj/%, $(X_SFILES:.S=.o))
+X_COBJS		:= $(patsubst %, .obj/%, $(X_CFILES:.c=.o))
+X_CPPOBJS	:= $(patsubst %, .obj/%, $(X_CPPFILES:.cpp=.o)) 
+X_OBJS		:= $(X_SOBJS) $(X_COBJS) $(X_CPPOBJS)
+
+VPATH		:= $(X_OBJDIRS)
+
+.PHONY:	all clean
+all : $(X_NAME)
+
+$(X_NAME) : $(X_OBJS)
+	@echo [LD] Linking $@.elf
+	@$(CC) $(X_LDFLAGS) $(X_LIBDIRS) -Wl,--cref,-Map=$@.map $^ -o $@.elf $(X_LIBS)
+	@echo [OC] Objcopying $@.bin
+	@$(OC) $(X_OCFLAGS) $@.elf $@.bin
+	@echo [TFTP] TFTP bootable file created: $@.bin
+	@echo Ready for U-BOOT tftpboot command
+
+$(X_SOBJS) : .obj/%.o : %.S
+	@echo [AS] $<
+	@$(AS) $(X_ASFLAGS) $(X_INCDIRS) -c $< -o $@
+	@$(AS) $(X_ASFLAGS) -MD -MP -MF $@.d $(X_INCDIRS) -c $< -o $@
+
+$(X_COBJS) : .obj/%.o : %.c
+	@echo [CC] $<
+	@$(CC) $(X_CFLAGS) $(X_INCDIRS) -c $< -o $@
+	@$(CC) $(X_CFLAGS) -MD -MP -MF $@.d $(X_INCDIRS) -c $< -o $@
+
+$(X_CPPOBJS) : .obj/%.o : %.cpp
+	@echo [CXX] $<
+	@$(CXX) $(X_CXXFLAGS) $(X_INCDIRS) -c $< -o $@	
+	@$(CXX) $(X_CXXFLAGS) -MD -MP -MF $@.d $(X_INCDIRS) -c $< -o $@
+
+clean:
+ifeq ($(HOSTOS),windows)
+	@if exist $(X_OUT) rmdir /s /q $(X_OUT)
+	@if exist .obj rmdir /s /q .obj
+else
+	@$(RM) $(X_DEPS) $(X_OBJS) $(X_OBJDIRS) $(X_OUT)
+endif
+	@echo Clean complete.
+
+#
+# Include the dependency files, should be place the last of makefile
+#
+# Create all obj directories automatically
+ifeq ($(HOSTOS),windows)
+$(shell if not exist $(X_OUT) mkdir $(X_OUT))
+$(foreach dir,$(X_OBJDIRS),$(shell if not exist $(subst /,\,$(dir)) mkdir $(subst /,\,$(dir))))
+else
+$(shell $(MKDIR) $(X_OBJDIRS) $(X_OUT))
+endif
+sinclude $(X_DEPS)
