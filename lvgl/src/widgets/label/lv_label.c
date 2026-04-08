@@ -806,6 +806,7 @@ static void lv_label_event(const lv_obj_class_t * class_p, lv_event_t * e)
         lv_event_set_ext_draw_size(e, font_h / 4);
     }
     else if(code == LV_EVENT_GET_SELF_SIZE) {
+        LV_LOG_WARN("DEBUG: lv_label_event GET_SELF_SIZE reached");
         lv_label_t * label = (lv_label_t *)obj;
         if(label->invalid_size_cache) {
             const lv_font_t * font = lv_obj_get_style_text_font(obj, LV_PART_MAIN);
@@ -813,6 +814,7 @@ static void lv_label_event(const lv_obj_class_t * class_p, lv_event_t * e)
                 LV_LOG_WARN("lv_label_event: font is NULL!");
                 return;
             }
+            LV_LOG_WARN("DEBUG: font OK, calling lv_text_get_size_attributes");
             int32_t letter_space = lv_obj_get_style_text_letter_space(obj, LV_PART_MAIN);
 
             int32_t line_space = lv_obj_get_style_text_line_space(obj, LV_PART_MAIN);
@@ -836,6 +838,7 @@ static void lv_label_event(const lv_obj_class_t * class_p, lv_event_t * e)
             attributes.max_width = w;
 
             lv_text_get_size_attributes(&label->size_cache, label->text, font, &attributes);
+            LV_LOG_WARN("DEBUG: lv_text_get_size_attributes returned");
             lv_label_set_dots(obj, dot_begin);
 
             label->size_cache.y = LV_MIN(label->size_cache.y, lv_obj_get_style_max_height(obj, LV_PART_MAIN));
