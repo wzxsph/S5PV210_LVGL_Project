@@ -809,6 +809,10 @@ static void lv_label_event(const lv_obj_class_t * class_p, lv_event_t * e)
         lv_label_t * label = (lv_label_t *)obj;
         if(label->invalid_size_cache) {
             const lv_font_t * font = lv_obj_get_style_text_font(obj, LV_PART_MAIN);
+            if(font == NULL) {
+                LV_LOG_WARN("lv_label_event: font is NULL!");
+                return;
+            }
             int32_t letter_space = lv_obj_get_style_text_letter_space(obj, LV_PART_MAIN);
 
             int32_t line_space = lv_obj_get_style_text_line_space(obj, LV_PART_MAIN);

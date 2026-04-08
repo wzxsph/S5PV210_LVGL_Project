@@ -177,10 +177,11 @@ int main(int argc, char * argv[])
 	debug_printf("[UI] Test UI creation COMPLETE!\r\n");
 
 	/* 5. 强制刷新一次屏幕 - 测试 flush_cb 是否工作 */
-	debug_printf("[TEST] Forcing one LVGL refresh cycle...\r\n");
-	lv_refr_now(NULL);  /* 强制 LVGL 立即处理所有待处理的更新 */
-	mdelay(100);
-	debug_printf("[TEST] Forced refresh done.\r\n");
+	debug_printf("[TEST] Skipping forced refresh to test main loop...\r\n");
+	/* TEMPORARILY COMMENTED OUT FOR DEBUGGING */
+	/* lv_refr_now(NULL); */
+	/* mdelay(100); */
+	debug_printf("[TEST] Skipped refresh.\r\n");
 
 	debug_printf("============================================\r\n");
 	debug_printf("  Entering main loop...\r\n");
