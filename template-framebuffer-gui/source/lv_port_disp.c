@@ -17,7 +17,7 @@ extern uint32_t get_system_time_ms(void);
 static uint8_t buf_1[MY_DISP_HOR_RES * 48 * 4];
 
 /* 调试统计 */
-static uint32_t flush_count = 0;
+uint32_t flush_count = 0;
 static uint32_t last_flush_debug = 0;
 
 /* 调试输出宏 */
@@ -163,8 +163,8 @@ void lv_port_disp_init(void)
 
 	/* 3. 设置渲染缓冲区（单缓冲 + 部分渲染模式） */
 	disp_debug("[DISP_INIT] Setting render buffers...\r\n");
-	disp_debug("[DISP_INIT]   buf_1 @ 0x%08X, size=%d bytes\r\n",
-	           (unsigned int)buf_1, sizeof(buf_1));
+	disp_debug("[DISP_INIT]   buf_1 size=%u bytes\r\n",
+	           (unsigned int)sizeof(buf_1));
 	
 	lv_display_set_buffers(disp, buf_1, NULL, sizeof(buf_1),
 	                       LV_DISPLAY_RENDER_MODE_PARTIAL);

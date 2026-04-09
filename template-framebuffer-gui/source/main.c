@@ -10,6 +10,9 @@ extern void lv_port_disp_init(void);
 /* 外部声明：毫秒时间获取函数 */
 extern uint32_t get_system_time_ms(void);
 
+/* 外部声明：flush 计数（来自 lv_port_disp.c） */
+extern uint32_t flush_count;
+
 #define DEBUG_UART_CH   2       /* 使用 UART2 进行调试输出 */
 #define DEBUG_BAUD      B115200
 
@@ -188,37 +191,43 @@ int main(int argc, char * argv[])
 	debug_printf("  Entering main loop...\r\n");
 	debug_printf("============================================\r\n\r\n");
 
-	/* 7. LVGL 主循环 */
-	debug_printf("[LOOP] First lv_timer_handler() call...\r\n");
-	lv_timer_handler();     /* 第一次调用，测试是否卡死 */
-	debug_printf("[LOOP] First call returned! Entering main loop...\r\n");
+	/* 先手动测试 framebuffer 写入 */
+	{
+		extern struct surface_t * s5pv210_screen_surface(void);
+		struct surface_t * surf = s5pv210_screen_surface();
+		if (surf && surf->pixels) {
+			uint32_t * fb = (uint32_t *)surf->pixels;
+			debug_printf("[TEST] Manual framebuffer fill test...\r\n");
+			/* 用红色填充整个屏幕 */
+			for (int i = 0; i < 1024 * 600; i++) {
+				fb[i] = 0xFFFF0000;  /* XRGB8888: 红色 */
+			}
+			debug_printf("[TEST] Screen filled RED! Check LCD.\r\n");
+		}
+	}
 
+	/* 等待 3 秒钟，让用户观察红色屏幕 */
+	mdelay(3000);
+
+	/* 7. LVGL 主循环 - 带 5 秒超时保护 */
 	while(1) {
-		lv_timer_handler();     /* LVGL v9 的任务处理入口 */
+		uint32_t t0 = get_system_time_ms();
+		lv_timer_handler();
+		uint32_t t1 = get_system_time_ms();
 
 		loop_count++;
 
-		/* 每 5 秒输出一次调试状态 */
-		if ((get_system_time_ms() - last_debug_time) >= 5000) {
+		/* 首次循环或每 5 秒输出一次 */
+		if (loop_count == 1 || (get_system_time_ms() - last_debug_time) >= 5000) {
 			last_debug_time = get_system_time_ms();
-
-			debug_printf("[LOOP] tick=%u loops=%lu\r\n",
+			debug_printf("[LOOP] tick=%u loops=%lu flush=%lu handler_ms=%u\r\n",
 			             get_system_time_ms(),
-			             (unsigned long)loop_count);
-
-			/* 验证屏幕 surface 是否有效 */
-			{
-				extern struct surface_t * s5pv210_screen_surface(void);
-				struct surface_t * surf = s5pv210_screen_surface();
-				if (surf && surf->pixels) {
-					debug_printf("[FB]   Framebuffer addr: 0x%08X\r\n", (unsigned int)surf->pixels);
-				} else {
-					debug_printf("[FB]   WARNING: Invalid framebuffer surface!\r\n");
-				}
-			}
+			             (unsigned long)loop_count,
+			             (unsigned long)flush_count,
+			             t1 - t0);
 		}
 
-		mdelay(5);              /* 适当延时，降低 CPU 占用 */
+		mdelay(5);
 	}
 
 	return 0;
