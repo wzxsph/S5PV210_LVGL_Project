@@ -190,7 +190,9 @@ int main(int argc, char * argv[])
 
 	/* 7. LVGL 主循环 */
 	while(1) {
+		uint32_t t0 = get_system_time_ms();
 		lv_timer_handler();     /* LVGL v9 的任务处理入口 */
+		uint32_t t1 = get_system_time_ms();
 
 		loop_count++;
 
@@ -198,10 +200,10 @@ int main(int argc, char * argv[])
 		if ((get_system_time_ms() - last_debug_time) >= 5000) {
 			last_debug_time = get_system_time_ms();
 
-			debug_printf("[LOOP] tick=%u loops=%lu time=%ums\r\n",
+			debug_printf("[LOOP] tick=%u loops=%lu handler_ms=%u\r\n",
 			             get_system_time_ms(),
 			             (unsigned long)loop_count,
-			             get_system_time_ms());
+			             t1 - t0);
 
 			/* 验证屏幕 surface 是否有效 */
 			{
