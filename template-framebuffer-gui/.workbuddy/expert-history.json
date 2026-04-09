@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "sessions": {
+    "7d696dac817c434791d86910526b24ba": [
+      {
+        "expertId": "EmbeddedFirmwareEngineer",
+        "name": "Owen",
+        "profession": "嵌入式固件工程师",
+        "avatarUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/avatars/02-Engineering/EmbeddedFirmwareEngineer/EmbeddedFirmwareEngineer.png",
+        "promptUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/experts/02-Engineering/EmbeddedFirmwareEngineer/EmbeddedFirmwareEngineer_zh.md",
+        "usedAt": 1775694401861,
+        "industryId": "all"
+      }
+    ]
+  },
+  "lastUpdated": 1775694930130
+}
