@@ -316,22 +316,26 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     lv_draw_task_t * t = NULL;
     t = lv_draw_get_available_task(layer, NULL, DRAW_UNIT_ID_SW);
     if(t == NULL) {
+        LV_LOG_ERROR("SW dispatch: no available task, head=%p", layer->draw_task_head);
         LV_PROFILER_DRAW_END;
         return LV_DRAW_UNIT_IDLE;  /*Couldn't start rendering*/
     }
 
     void * buf = lv_draw_layer_alloc_buf(layer);
     if(buf == NULL) {
+        LV_LOG_ERROR("SW dispatch: alloc_buf returned NULL!");
         LV_PROFILER_DRAW_END;
         return LV_DRAW_UNIT_IDLE;  /*Couldn't start rendering*/
     }
 
+    LV_LOG_ERROR("SW dispatch: executing task type=%d state=%d", t->type, t->state);
     t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
     draw_sw_unit->task_act = t;
 
     execute_drawing(t);
     draw_sw_unit->task_act->state = LV_DRAW_TASK_STATE_FINISHED;
     draw_sw_unit->task_act = NULL;
+    LV_LOG_ERROR("SW dispatch: task finished");
 
     /*The draw unit is free now. Request a new dispatching as it can get a new task*/
     lv_draw_dispatch_request();

@@ -170,7 +170,9 @@ void lv_draw_finalize_task_creation(lv_layer_t * layer, lv_draw_task_t * t)
             t->state = LV_DRAW_TASK_STATE_FINISHED;
         }
         else {
+            LV_LOG_ERROR("finalize_task: type=%d pref_id=%d calling dispatch", t->type, t->preferred_draw_unit_id);
             lv_draw_dispatch();
+            LV_LOG_ERROR("finalize_task: dispatch returned, task state=%d", t->state);
         }
     }
     else {

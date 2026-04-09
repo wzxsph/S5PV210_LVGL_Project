@@ -797,6 +797,7 @@ static void refr_invalid_areas(void)
     disp_refr->last_area = 0;
     disp_refr->last_part = 0;
     disp_refr->rendering_in_progress = true;
+    LV_LOG_ERROR("refr_invalid_areas: inv_p=%d, starting render loop", disp_refr->inv_p);
 
     for(i = 0; i < (int32_t)disp_refr->inv_p; i++) {
         /*Refresh the unjoined areas*/
@@ -826,9 +827,12 @@ static void refr_invalid_areas(void)
                 if(sub_area.y2 > inv_a.y2) sub_area.y2 = inv_a.y2;
                 row_last = sub_area.y2;
                 if(inv_a.y2 == row_last) disp_refr->last_part = 1;
+                LV_LOG_ERROR("refr_area: row=%d sub=(%d,%d)-(%d,%d)", row, sub_area.x1, sub_area.y1, sub_area.x2, sub_area.y2);
                 refr_area(&sub_area, y_off);
                 y_off += lv_area_get_height(&sub_area);
+                LV_LOG_ERROR("refr_area done, calling draw_buf_flush");
                 draw_buf_flush(disp_refr);
+                LV_LOG_ERROR("draw_buf_flush done");
             }
 
             /*If the last y coordinates are not handled yet ...*/
@@ -1397,10 +1401,17 @@ static void draw_buf_flush(lv_display_t * disp)
 {
     /*Flush the rendered content to the display*/
     lv_layer_t * layer = disp->layer_head;
+    uint32_t loop_cnt = 0;
 
     while(layer->draw_task_head) {
         lv_draw_dispatch_wait_for_request();
         lv_draw_dispatch();
+        loop_cnt++;
+        if(loop_cnt > 100) {
+            LV_LOG_ERROR("draw_buf_flush stuck! task_head=%p state=%d type=%d",
+                         layer->draw_task_head, layer->draw_task_head->state, layer->draw_task_head->type);
+            break;
+        }
     }
 
     /* In double buffered mode wait until the other buffer is freed

@@ -77,28 +77,6 @@ static void do_system_initial(void)
 	s5pv210_fb_initial();
 	debug_printf("[INIT] s5pv210_fb_initial() done - LCD should be ON now\r\n");
 
-	/* 额外验证：再次检查 framebuffer */
-	{
-		extern struct surface_t * s5pv210_screen_surface(void);
-		struct surface_t * surf = s5pv210_screen_surface();
-		debug_printf("[INIT] Post-init FB check: surf=0x%08X pixels=0x%08X\r\n",
-		           (unsigned int)surf,
-		           surf ? (unsigned int)(surf->pixels) : 0);
-
-		if (surf && surf->pixels) {
-			debug_printf("[INIT] Framebuffer is VALID!\r\n");
-			/* 写入测试像素到 framebuffer 中心位置 */
-			uint32_t * fb = (uint32_t *)(surf->pixels);
-			int center_x = 512;  /* 1024/2 */
-			int center_y = 300;  /* 600/2 */
-			/* XRGB8888: 0xAARRGGBB -> 绿色 */
-			fb[center_y * 1024 + center_x] = 0xFF00FF00;
-			debug_printf("[INIT] Wrote test pixel GREEN at (%d,%d)\r\n", center_x, center_y);
-		} else {
-			debug_printf("[ERROR] Framebuffer is INVALID or NULL!\r\n");
-		}
-	}
-
 	led_initial();
 	beep_initial();
 	key_initial();
@@ -111,8 +89,6 @@ int main(int argc, char * argv[])
 {
 	uint32_t loop_count = 0;
 	static uint32_t last_debug_time = 0;
-	lv_obj_t * btn = NULL;
-	lv_obj_t * label = NULL;
 
 	debug_printf("\r\n");
 	debug_printf("============================================\r\n");
@@ -149,7 +125,6 @@ int main(int argc, char * argv[])
 		debug_printf("[LVGL]   Free: %zu bytes\r\n", mon.free_size);
 		debug_printf("[LVGL]   Used: %zu bytes (%d%%)\r\n", mon.total_size - mon.free_size, mon.used_pct);
 		debug_printf("[LVGL]   Biggest free: %zu bytes\r\n", mon.free_biggest_size);
-		debug_printf("[LVGL]   Frag: %d%%\r\n", mon.frag_pct);
 	}
 
 	/* 4. 初始化显示接口 */
@@ -157,74 +132,78 @@ int main(int argc, char * argv[])
 	lv_port_disp_init();
 	debug_printf("[DISP] lv_port_disp_init() returned!\r\n");
 
-	/* 6. 创建测试 UI */
-	debug_printf("[UI] Creating test button and label...\r\n");
-
-	btn = lv_button_create(lv_screen_active());
-	if (btn) {
-		lv_obj_center(btn);
-		lv_obj_set_size(btn, 300, 80);
-		debug_printf("[UI] Button created at center (300x80)\r\n");
-
-		label = lv_label_create(btn);
-		if (label) {
-			lv_label_set_text(label, "Hello Study210 LVGL!");
-			lv_obj_center(label);
-			debug_printf("[UI] Label created with text 'Hello Study210 LVGL!'\r\n");
-		} else {
-			debug_printf("[ERROR] Failed to create label!\r\n");
-		}
-	} else {
-		debug_printf("[ERROR] Failed to create button!\r\n");
-	}
-
-	debug_printf("[UI] Test UI creation COMPLETE!\r\n");
-
-	/* 5. 强制刷新一次屏幕 - 测试 flush_cb 是否工作 */
-	debug_printf("[TEST] Skipping forced refresh to test main loop...\r\n");
-	/* TEMPORARILY COMMENTED OUT FOR DEBUGGING */
-	/* lv_refr_now(NULL); */
-	/* mdelay(100); */
-	debug_printf("[TEST] Skipped refresh.\r\n");
-
-	debug_printf("============================================\r\n");
-	debug_printf("  Entering main loop...\r\n");
-	debug_printf("============================================\r\n\r\n");
-
-	/* 先手动测试 framebuffer 写入 */
+	/* 5. 测试1：先手动写 RGB 条纹验证 LCD 硬件 */
+	debug_printf("[TEST1] Manual RGB stripe test to verify LCD hardware...\r\n");
 	{
 		extern struct surface_t * s5pv210_screen_surface(void);
 		struct surface_t * surf = s5pv210_screen_surface();
 		if (surf && surf->pixels) {
 			uint32_t * fb = (uint32_t *)surf->pixels;
-			debug_printf("[TEST] Manual framebuffer fill test...\r\n");
-			/* 用红色填充整个屏幕 */
-			for (int i = 0; i < 1024 * 600; i++) {
-				fb[i] = 0xFFFF0000;  /* XRGB8888: 红色 */
-			}
-			debug_printf("[TEST] Screen filled RED! Check LCD.\r\n");
+			for (int i = 0; i < 1024 * 200; i++) fb[i] = 0xFFFF0000;  /* Red */
+			for (int i = 1024 * 200; i < 1024 * 400; i++) fb[i] = 0xFF00FF00;  /* Green */
+			for (int i = 1024 * 400; i < 1024 * 600; i++) fb[i] = 0xFF0000FF;  /* Blue */
+			debug_printf("[TEST1] RGB stripes drawn! Check LCD.\r\n");
 		}
 	}
 
-	/* 等待 3 秒钟，让用户观察红色屏幕 */
-	mdelay(3000);
+	mdelay(2000);  /* 显示2秒让用户确认 */
+	debug_printf("[TEST1] RGB stripe test done. Now testing LVGL rendering...\r\n");
 
-	/* 7. LVGL 主循环 - 带 5 秒超时保护 */
+	/* 6. 清屏 - 用黑色覆盖 RGB 条纹 */
+	{
+		extern struct surface_t * s5pv210_screen_surface(void);
+		struct surface_t * surf = s5pv210_screen_surface();
+		if (surf && surf->pixels) {
+			uint32_t * fb = (uint32_t *)surf->pixels;
+			for (int i = 0; i < 1024 * 600; i++) fb[i] = 0xFF000000;  /* Black */
+			debug_printf("[TEST1] Screen cleared to black.\r\n");
+		}
+	}
+
+	mdelay(500);
+
+	/* 7. 测试2：创建一个简单的 LVGL 控件 */
+	debug_printf("[TEST2] Creating LVGL label...\r\n");
+	{
+		lv_obj_t * label = lv_label_create(lv_screen_active());
+		if (label) {
+			lv_label_set_text(label, "Hello S5PV210!");
+			lv_obj_center(label);
+			lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+			debug_printf("[TEST2] Label created and centered.\r\n");
+		} else {
+			debug_printf("[TEST2] ERROR: Failed to create label!\r\n");
+		}
+	}
+
+	/* 8. 进入 LVGL 主循环 */
+	debug_printf("[LOOP] Entering LVGL main loop with lv_timer_handler()...\r\n");
+	debug_printf("============================================\r\n\r\n");
+
 	while(1) {
-		uint32_t t0 = get_system_time_ms();
-		lv_timer_handler();
-		uint32_t t1 = get_system_time_ms();
-
 		loop_count++;
 
-		/* 首次循环或每 5 秒输出一次 */
-		if (loop_count == 1 || (get_system_time_ms() - last_debug_time) >= 5000) {
+		/* 调用 LVGL 定时器处理（包含渲染） */
+		uint32_t time_before = get_system_time_ms();
+		uint32_t result = lv_timer_handler();
+		uint32_t time_after = get_system_time_ms();
+		uint32_t elapsed = time_after - time_before;
+
+		/* 定期调试输出 */
+		if ((get_system_time_ms() - last_debug_time) >= 3000) {
 			last_debug_time = get_system_time_ms();
-			debug_printf("[LOOP] tick=%u loops=%lu flush=%lu handler_ms=%u\r\n",
+			debug_printf("[LOOP] tick=%u loops=%lu flush=%lu handler=%luus res=%lu\r\n",
 			             get_system_time_ms(),
 			             (unsigned long)loop_count,
 			             (unsigned long)flush_count,
-			             t1 - t0);
+			             (unsigned long)(elapsed * 1000),
+			             (unsigned long)result);
+		}
+
+		/* 如果 handler 执行超过1秒，可能是卡死 */
+		if (elapsed > 1000) {
+			debug_printf("[WARN] lv_timer_handler() took %lu ms! Possible hang.\r\n",
+			             (unsigned long)elapsed);
 		}
 
 		mdelay(5);
