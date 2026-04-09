@@ -4,6 +4,7 @@
 #include <graphic/surface.h>
 #include <s5pv210-serial.h>
 #include <stdio.h>
+#include <string.h>
 
 /* 前向声明 */
 extern uint32_t get_system_time_ms(void);
@@ -39,13 +40,16 @@ static void disp_debug(const char * fmt, ...)
 
 /*-----------------------------------------------------
  * flush_cb: 将 LVGL 渲染好的像素数据写入 Framebuffer
+ * 
+ * S5PV210 LCD 控制器已配置为 RGB_P 模式 + WORD SWAP，
+ * 像素格式为 XRGB8888（字节序：B[0] G[1] R[2] X[3]），
+ * 与 LVGL 的 LV_COLOR_FORMAT_XRGB8888 完全匹配，
+ * 因此可以直接 memcpy，无需逐像素转换。
  *----------------------------------------------------*/
 static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_map)
 {
 	struct surface_t * surface;
 	uint32_t * fb_base;
-	int32_t x, y;
-	uint32_t * color_p;
 
 	flush_count++;
 
@@ -53,7 +57,6 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 	surface = s5pv210_screen_surface();
 
 	if (!surface || !surface->pixels) {
-		/* 每 100 次刷新才报告一次错误，避免刷屏 */
 		if (flush_count == 1 || (flush_count % 100) == 0) {
 			disp_debug("[FLUSH] ERROR: Invalid framebuffer! surface=0x%08X pixels=0x%08X\r\n",
 			           (unsigned int)surface,
@@ -64,25 +67,31 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 	}
 
 	fb_base = (uint32_t *)surface->pixels;
-	color_p = (uint32_t *)px_map;
 
-	/* 像素复制循环 */
-	for(y = area->y1; y <= area->y2; y++) {
-		for(x = area->x1; x <= area->x2; x++) {
-			fb_base[y * MY_DISP_HOR_RES + x] = *color_p;
-			color_p++;
-		}
+	/* 计算刷新区域的参数 */
+	int32_t w = area->x2 - area->x1 + 1;
+	int32_t h = area->y2 - area->y1 + 1;
+	uint32_t * dst = fb_base + area->y1 * MY_DISP_HOR_RES + area->x1;
+	uint32_t * src = (uint32_t *)px_map;
+	uint32_t dst_stride = MY_DISP_HOR_RES;  /* framebuffer 行步长（像素） */
+	uint32_t src_stride = w;                 /* LVGL 渲染缓冲区行步长（像素） */
+
+	/* 行级复制：每行用 memcpy 一次性拷贝 */
+	for (int32_t y = 0; y < h; y++) {
+		memcpy(dst, src, w * 4);
+		dst += dst_stride;
+		src += src_stride;
 	}
 
-	/* 定期输出调试信息（每秒一次，假设 tick 100Hz） */
-	if ((get_system_time_ms() - last_flush_debug) >= 1000) {
+	/* 首帧和定期调试输出 */
+	if (flush_count <= 3 || (get_system_time_ms() - last_flush_debug) >= 5000) {
 		last_flush_debug = get_system_time_ms();
-		disp_debug("[FLUSH] #%lu area=(%d,%d)-(%d,%d) pxmap=0x%08X fb=0x%08X total=%lu\r\n",
+		disp_debug("[FLUSH] #%lu area=(%d,%d)-(%d,%d) %dx%d pxmap=0x%08X fb=0x%08X\r\n",
 		           (unsigned long)flush_count,
 		           area->x1, area->y1, area->x2, area->y2,
+		           w, h,
 		           (unsigned int)px_map,
-		           (unsigned int)fb_base,
-		           (unsigned long)flush_count);
+		           (unsigned int)fb_base);
 	}
 
 	/* 通知 LVGL 刷新完成 */

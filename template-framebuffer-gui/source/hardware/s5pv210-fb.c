@@ -756,17 +756,17 @@ static struct s5pv210fb_lcd vs070cxn_lcd = {
 	.freq				= 60,
 
 	.output				= S5PV210FB_OUTPUT_RGB,
-	.rgb_mode			= S5PV210FB_MODE_BGR_P,
+	.rgb_mode			= S5PV210FB_MODE_RGB_P,
 	.bpp_mode			= S5PV210FB_BPP_MODE_32BPP,
-	.swap				= S5PV210FB_SWAP_WORD,
+	.swap				= 0,
 
 	.rgba = {
 		.r_mask			= 8,
-		.r_field		= 0,
+		.r_field		= 16,
 		.g_mask			= 8,
 		.g_field		= 8,
 		.b_mask			= 8,
-		.b_field		= 16,
+		.b_field		= 0,
 		.a_mask			= 8,
 		.a_field		= 24,
 	},

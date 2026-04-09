@@ -88,7 +88,8 @@ static void do_system_initial(void)
 			uint32_t * fb = (uint32_t *)(surf->pixels);
 			int center_x = 512;  /* 1024/2 */
 			int center_y = 300;  /* 600/2 */
-			fb[center_y * 1024 + center_x] = 0xFF00FF00;  /* 绿色像素 ARGB */
+			/* XRGB8888: 0xAARRGGBB -> 绿色 */
+			fb[center_y * 1024 + center_x] = 0xFF00FF00;
 			debug_printf("[INIT] Wrote test pixel GREEN at (%d,%d)\r\n", center_x, center_y);
 		} else {
 			debug_printf("[ERROR] Framebuffer is INVALID or NULL!\r\n");
