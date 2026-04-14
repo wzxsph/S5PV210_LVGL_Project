@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make -j8)",
+      "Bash(make clean:*)",
+      "Bash(make -j24)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\ihao8\\\\Desktop\\\\maybe\\\\LVGL_baseS5PV210_20260407\\\\auto_test.ps1\" 2>&1)"
+    ]
+  }
+}

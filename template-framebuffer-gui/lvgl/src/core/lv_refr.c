@@ -399,15 +399,23 @@ void lv_display_refr_timer(lv_timer_t * tmr)
         return;
     }
 
+    LV_LOG_ERROR("refr_timer: event REFR_START ok, updating layout...");
+
     /*Refresh the screen's layout if required*/
     LV_PROFILER_LAYOUT_BEGIN_TAG("layout");
+    LV_LOG_ERROR("refr_timer: calling lv_obj_update_layout(act_scr)...");
     lv_obj_update_layout(disp_refr->act_scr);
+    LV_LOG_ERROR("refr_timer: act_scr layout done");
     if(disp_refr->prev_scr) lv_obj_update_layout(disp_refr->prev_scr);
 
+    LV_LOG_ERROR("refr_timer: calling lv_obj_update_layout(bottom_layer)...");
     lv_obj_update_layout(disp_refr->bottom_layer);
+    LV_LOG_ERROR("refr_timer: calling lv_obj_update_layout(top_layer)...");
     lv_obj_update_layout(disp_refr->top_layer);
+    LV_LOG_ERROR("refr_timer: calling lv_obj_update_layout(sys_layer)...");
     lv_obj_update_layout(disp_refr->sys_layer);
     LV_PROFILER_LAYOUT_END_TAG("layout");
+    LV_LOG_ERROR("refr_timer: all layouts done, inv_p=%d", disp_refr->inv_p);
 
     /*Do nothing if there is no active screen*/
     if(disp_refr->act_scr == NULL) {
@@ -797,7 +805,6 @@ static void refr_invalid_areas(void)
     disp_refr->last_area = 0;
     disp_refr->last_part = 0;
     disp_refr->rendering_in_progress = true;
-    LV_LOG_ERROR("refr_invalid_areas: inv_p=%d, starting render loop", disp_refr->inv_p);
 
     for(i = 0; i < (int32_t)disp_refr->inv_p; i++) {
         /*Refresh the unjoined areas*/
@@ -827,12 +834,9 @@ static void refr_invalid_areas(void)
                 if(sub_area.y2 > inv_a.y2) sub_area.y2 = inv_a.y2;
                 row_last = sub_area.y2;
                 if(inv_a.y2 == row_last) disp_refr->last_part = 1;
-                LV_LOG_ERROR("refr_area: row=%d sub=(%d,%d)-(%d,%d)", row, sub_area.x1, sub_area.y1, sub_area.x2, sub_area.y2);
                 refr_area(&sub_area, y_off);
                 y_off += lv_area_get_height(&sub_area);
-                LV_LOG_ERROR("refr_area done, calling draw_buf_flush");
                 draw_buf_flush(disp_refr);
-                LV_LOG_ERROR("draw_buf_flush done");
             }
 
             /*If the last y coordinates are not handled yet ...*/

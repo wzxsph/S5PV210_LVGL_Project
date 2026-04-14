@@ -33,7 +33,7 @@ LDFLAGS		:= -T link.ld -nostdlib -static
 ARFLAGS		:= -rcs
 OCFLAGS		:= -v -O binary
 ODFLAGS		:=
-MCFLAGS		:= -mcpu=cortex-a8 -mtune=cortex-a8  -mfpu=neon -ftree-vectorize -ffast-math -mfloat-abi=softfp
+MCFLAGS		:= -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -ffast-math -mfloat-abi=softfp
 
 LIBDIRS		:=
 LIBS 		:=
@@ -77,6 +77,15 @@ INCDIRS		+= . \
 
 #
 # LVGL source directories
+# Only directories for enabled features are included.
+# Disabled features (see lv_conf.h):
+#   - GPU backends: vg_lite, dma2d, opengles, sdl, nema_gfx, nxp, renesas, espressif
+#   - Image/video codecs: ffmpeg, freetype, gif, libjpeg_turbo, libpng, libwebp,
+#                        lodepng, lz4, rlottie, svg, thorvg, tiny_ttf, tjpgd, bmp, bin_decoder, barcode, qrcode, rle, fsdrv
+#   - Themes: default, mono, simple
+#   - Debug: debugging, monkey, sysmon, test
+#   - Widgets: lottie (LV_USE_LOTTIE 0), 3dtexture (LV_USE_3DTEXTURE 0)
+#   - Others: file_explorer, fragment (disabled in lv_conf.h)
 #
 SRCDIRS		+= lvgl/src \
 			   lvgl/src/core \
@@ -91,20 +100,6 @@ SRCDIRS		+= lvgl/src \
 			   lvgl/src/draw/convert/neon \
 			   lvgl/src/draw/convert/helium \
 			   lvgl/src/draw/snapshot \
-			   lvgl/src/draw/vg_lite \
-			   lvgl/src/draw/dma2d \
-			   lvgl/src/draw/opengles \
-			   lvgl/src/draw/sdl \
-			   lvgl/src/draw/nema_gfx \
-			   lvgl/src/draw/nxp \
-			   lvgl/src/draw/nxp/pxp \
-			   lvgl/src/draw/nxp/g2d \
-			   lvgl/src/draw/renesas \
-			   lvgl/src/draw/renesas/dave2d \
-			   lvgl/src/draw/eve \
-			   lvgl/src/draw/nanovg \
-			   lvgl/src/draw/espressif \
-			   lvgl/src/draw/espressif/ppa \
 			   lvgl/src/font \
 			   lvgl/src/font/fmt_txt \
 			   lvgl/src/font/binfont_loader \
@@ -114,40 +109,18 @@ SRCDIRS		+= lvgl/src \
 			   lvgl/src/layouts \
 			   lvgl/src/layouts/flex \
 			   lvgl/src/layouts/grid \
-			   lvgl/src/libs/bin_decoder \
-			   lvgl/src/libs/barcode \
-			   lvgl/src/libs/bmp \
-			   lvgl/src/libs/ffmpeg \
-			   lvgl/src/libs/freetype \
-			   lvgl/src/libs/fsdrv \
-			   lvgl/src/libs/gif \
-			   lvgl/src/libs/libjpeg_turbo \
-			   lvgl/src/libs/libpng \
-			   lvgl/src/libs/libwebp \
-			   lvgl/src/libs/lodepng \
-			   lvgl/src/libs/lz4 \
-			   lvgl/src/libs/qrcode \
-			   lvgl/src/libs/rle \
-			   lvgl/src/libs/rlottie \
-			   lvgl/src/libs/svg \
-			   lvgl/src/libs/thorvg \
-			   lvgl/src/libs/tiny_ttf \
-			   lvgl/src/libs/tjpgd \
 			   lvgl/src/misc \
 			   lvgl/src/misc/cache \
 			   lvgl/src/misc/cache/class \
 			   lvgl/src/misc/cache/instance \
 			   lvgl/src/osal \
+			   lvgl/src/libs/bin_decoder \
 			   lvgl/src/others \
-			   lvgl/src/others/file_explorer \
-			   lvgl/src/others/fragment \
 			   lvgl/src/others/translation \
 			   lvgl/src/stdlib \
 			   lvgl/src/stdlib/builtin \
 			   lvgl/src/stdlib/clib \
 			   lvgl/src/themes \
-			   lvgl/src/themes/default \
-			   lvgl/src/themes/mono \
 			   lvgl/src/themes/simple \
 			   lvgl/src/tick \
 			   lvgl/src/widgets/animimage \
@@ -170,7 +143,6 @@ SRCDIRS		+= lvgl/src \
 			   lvgl/src/widgets/led \
 			   lvgl/src/widgets/line \
 			   lvgl/src/widgets/list \
-			   lvgl/src/widgets/lottie \
 			   lvgl/src/widgets/menu \
 			   lvgl/src/widgets/msgbox \
 			   lvgl/src/widgets/objx_templ \
@@ -187,14 +159,8 @@ SRCDIRS		+= lvgl/src \
 			   lvgl/src/widgets/textarea \
 			   lvgl/src/widgets/tileview \
 			   lvgl/src/widgets/win \
-			   lvgl/src/widgets/3dtexture \
-			   lvgl/src/debugging \
-			   lvgl/src/debugging/monkey \
-			   lvgl/src/debugging/sysmon \
-			   lvgl/src/debugging/test \
 			   lvgl/src/drivers \
-			   lvgl/src/drivers/display \
-			   lvgl/src/drivers/display/lcd
+			   lvgl/src/drivers/display
 
 #
 # You shouldn't need to change anything below this point.
@@ -206,15 +172,9 @@ LD			:= $(CROSS)ld
 AR			:= $(CROSS)ar
 OC			:= $(CROSS)objcopy
 OD			:= $(CROSS)objdump
-ifeq ($(HOSTOS),windows)
-MKDIR		:= mkdir
-CP			:= copy
-RM			:= del /Q /F
-else
 MKDIR		:= mkdir -p
 CP			:= cp -af
-RM			:= rm -fr
-endif
+RM			:= rm -rf
 CD			:= cd
 FIND		:= find
 
@@ -246,13 +206,17 @@ X_DEPS		:= $(X_SDEPS) $(X_CDEPS) $(X_CPPDEPS)
 
 X_SOBJS		:= $(patsubst %, .obj/%, $(X_SFILES:.S=.o))
 X_COBJS		:= $(patsubst %, .obj/%, $(X_CFILES:.c=.o))
-X_CPPOBJS	:= $(patsubst %, .obj/%, $(X_CPPFILES:.cpp=.o)) 
+X_CPPOBJS	:= $(patsubst %, .obj/%, $(X_CPPFILES:.cpp=.o))
 X_OBJS		:= $(X_SOBJS) $(X_COBJS) $(X_CPPOBJS)
 
 VPATH		:= $(X_OBJDIRS)
 
-.PHONY:	all clean
-all : $(X_NAME)
+.PHONY:	all clean dirs
+
+all : dirs $(X_NAME)
+
+dirs:
+	@$(MKDIR) $(X_OBJDIRS) $(X_OUT)
 
 $(X_NAME) : $(X_OBJS)
 	@echo [LD] Linking $@.elf
@@ -274,26 +238,11 @@ $(X_COBJS) : .obj/%.o : %.c
 
 $(X_CPPOBJS) : .obj/%.o : %.cpp
 	@echo [CXX] $<
-	@$(CXX) $(X_CXXFLAGS) $(X_INCDIRS) -c $< -o $@	
+	@$(CXX) $(X_CXXFLAGS) $(X_INCDIRS) -c $< -o $@
 	@$(CXX) $(X_CXXFLAGS) -MD -MP -MF $@.d $(X_INCDIRS) -c $< -o $@
 
 clean:
-ifeq ($(HOSTOS),windows)
-	@if exist $(X_OUT) rmdir /s /q $(X_OUT)
-	@if exist .obj rmdir /s /q .obj
-else
-	@$(RM) $(X_DEPS) $(X_OBJS) $(X_OBJDIRS) $(X_OUT)
-endif
+	@$(RM) .obj output
 	@echo Clean complete.
 
-#
-# Include the dependency files, should be place the last of makefile
-#
-# Create all obj directories automatically
-ifeq ($(HOSTOS),windows)
-$(shell if not exist $(X_OUT) mkdir $(X_OUT))
-$(foreach dir,$(X_OBJDIRS),$(shell if not exist $(subst /,\,$(dir)) mkdir $(subst /,\,$(dir))))
-else
-$(shell $(MKDIR) $(X_OBJDIRS) $(X_OUT))
-endif
 sinclude $(X_DEPS)

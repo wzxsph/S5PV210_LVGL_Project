@@ -380,19 +380,13 @@ static lv_result_t event_send_core(lv_event_t * e)
     lv_result_t res = LV_RESULT_OK;
     lv_event_list_t * list = target->spec_attr ?  &target->spec_attr->event_list : NULL;
 
-    LV_LOG_WARN("DEBUG: event_send_core 1 calling lv_event_send preprocess=true");
     res = lv_event_send(list, e, true);
-    LV_LOG_WARN("DEBUG: event_send_core 1 returned");
     if(res != LV_RESULT_OK || e->stop_processing) return res;
 
-    LV_LOG_WARN("DEBUG: event_send_core 2 calling lv_obj_event_base");
     res = lv_obj_event_base(NULL, e);
-    LV_LOG_WARN("DEBUG: event_send_core 2 returned");
     if(res != LV_RESULT_OK || e->stop_processing) return res;
 
-    LV_LOG_WARN("DEBUG: event_send_core 3 calling lv_event_send preprocess=false");
     res = lv_event_send(list, e, false);
-    LV_LOG_WARN("DEBUG: event_send_core 3 returned");
     if(res != LV_RESULT_OK || e->stop_processing) return res;
 
     lv_obj_t * parent = lv_obj_get_parent(e->current_target);

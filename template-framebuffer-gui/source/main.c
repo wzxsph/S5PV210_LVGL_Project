@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <s5pv210-serial.h>
 #include <s5pv210-serial-stdio.h>
+#include <s5pv210-cp15.h>
 
 /* 外部声明：显示接口初始化 */
 extern void lv_port_disp_init(void);
@@ -57,6 +58,13 @@ static void do_system_initial(void)
 
 	s5pv210_clk_initial();
 	debug_printf("[INIT] s5pv210_clk_initial() done\r\n");
+
+	/* 启用 Cache 和 MMU - 提升软件渲染性能 */
+	debug_printf("[INIT] Enabling I-cache, D-cache and MMU...\r\n");
+	icache_enable();
+	dcache_enable();
+	mmu_enable();
+	debug_printf("[INIT] Cache and MMU enabled\r\n");
 
 	s5pv210_irq_initial();
 	debug_printf("[INIT] s5pv210_irq_initial() done\r\n");
@@ -180,30 +188,29 @@ int main(int argc, char * argv[])
 	debug_printf("[LOOP] Entering LVGL main loop with lv_timer_handler()...\r\n");
 	debug_printf("============================================\r\n\r\n");
 
+	/* 首次调用 lv_timer_handler 的调试包装 */
+	{
+		debug_printf("[LOOP] About to call lv_timer_handler() for the FIRST time...\r\n");
+		uint32_t t0 = get_system_time_ms();
+		uint32_t result = lv_timer_handler();
+		uint32_t t1 = get_system_time_ms();
+		debug_printf("[LOOP] FIRST lv_timer_handler() returned! result=%lu elapsed=%lums flush=%lu\r\n",
+		             (unsigned long)result, (unsigned long)(t1 - t0), (unsigned long)flush_count);
+	}
+
 	while(1) {
 		loop_count++;
 
 		/* 调用 LVGL 定时器处理（包含渲染） */
-		uint32_t time_before = get_system_time_ms();
-		uint32_t result = lv_timer_handler();
-		uint32_t time_after = get_system_time_ms();
-		uint32_t elapsed = time_after - time_before;
+		lv_timer_handler();
 
 		/* 定期调试输出 */
 		if ((get_system_time_ms() - last_debug_time) >= 3000) {
 			last_debug_time = get_system_time_ms();
-			debug_printf("[LOOP] tick=%u loops=%lu flush=%lu handler=%luus res=%lu\r\n",
+			debug_printf("[LOOP] tick=%u loops=%lu flush=%lu\r\n",
 			             get_system_time_ms(),
 			             (unsigned long)loop_count,
-			             (unsigned long)flush_count,
-			             (unsigned long)(elapsed * 1000),
-			             (unsigned long)result);
-		}
-
-		/* 如果 handler 执行超过1秒，可能是卡死 */
-		if (elapsed > 1000) {
-			debug_printf("[WARN] lv_timer_handler() took %lu ms! Possible hang.\r\n",
-			             (unsigned long)elapsed);
+			             (unsigned long)flush_count);
 		}
 
 		mdelay(5);
