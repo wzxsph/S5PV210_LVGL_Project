@@ -58,12 +58,6 @@ SECTIONS
 		. = ALIGN(8);
 		PROVIDE (__heap_end = .);
 
-		/* MMU Translation Table - 16KB aligned (must be 16KB boundary for TTBR0) */
-		. = ALIGN(0x4000);
-		PROVIDE (__translation_table = .);
-		. = . + 0x4000;
-		PROVIDE (__translation_table_end = .);
-
 		. = ALIGN(8);
 		PROVIDE (__stack_start = .);
 		PROVIDE (__stack_fiq_start = .);

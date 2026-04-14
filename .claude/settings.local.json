@@ -4,7 +4,11 @@
       "Bash(make -j8)",
       "Bash(make clean:*)",
       "Bash(make -j24)",
-      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\ihao8\\\\Desktop\\\\maybe\\\\LVGL_baseS5PV210_20260407\\\\auto_test.ps1\" 2>&1)"
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\ihao8\\\\Desktop\\\\maybe\\\\LVGL_baseS5PV210_20260407\\\\auto_test.ps1\" 2>&1)",
+      "Bash(make -C template-framebuffer-gui clean)",
+      "Bash(make -C template-framebuffer-gui -j8)",
+      "Bash(make -j20)",
+      "Bash(powershell -ExecutionPolicy Bypass -File auto_test.ps1 2>&1)"
     ]
   }
 }

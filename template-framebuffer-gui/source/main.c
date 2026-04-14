@@ -59,12 +59,9 @@ static void do_system_initial(void)
 	s5pv210_clk_initial();
 	debug_printf("[INIT] s5pv210_clk_initial() done\r\n");
 
-	/* 启用 Cache 和 MMU - 提升软件渲染性能 */
-	debug_printf("[INIT] Enabling I-cache, D-cache and MMU...\r\n");
-	icache_enable();
-	dcache_enable();
-	mmu_enable();
-	debug_printf("[INIT] Cache and MMU enabled\r\n");
+	/* 注意：暂时禁用 Cache 和 MMU，因为没有正确的翻译表会导致显示异常 */
+	/* TODO: 后续需要正确配置 MMU 翻译表后才能启用缓存以提升渲染性能 */
+	debug_printf("[INIT] Cache and MMU disabled for display correctness\r\n");
 
 	s5pv210_irq_initial();
 	debug_printf("[INIT] s5pv210_irq_initial() done\r\n");
