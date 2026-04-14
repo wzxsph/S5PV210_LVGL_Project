@@ -106,6 +106,7 @@ void lv_refr_now(lv_display_t * disp)
 
 void lv_obj_redraw(lv_layer_t * layer, lv_obj_t * obj)
 {
+    serial_printf(2, "[REFR] lv_obj_redraw: called obj=%p\r\n", obj);
     LV_PROFILER_REFR_BEGIN;
     lv_area_t clip_area_ori = layer->_clip_area;
     lv_area_t clip_coords_for_obj;
@@ -127,9 +128,15 @@ void lv_obj_redraw(lv_layer_t * layer, lv_obj_t * obj)
     /*If the object is visible on the current clip area*/
     layer->_clip_area = clip_coords_for_obj;
 
+    serial_printf(2, "[REFR] lv_obj_redraw: sending LV_EVENT_DRAW_MAIN_BEGIN\r\n");
     lv_obj_send_event(obj, LV_EVENT_DRAW_MAIN_BEGIN, layer);
+    serial_printf(2, "[REFR] lv_obj_redraw: LV_EVENT_DRAW_MAIN_BEGIN returned\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: sending LV_EVENT_DRAW_MAIN\r\n");
     lv_obj_send_event(obj, LV_EVENT_DRAW_MAIN, layer);
+    serial_printf(2, "[REFR] lv_obj_redraw: LV_EVENT_DRAW_MAIN returned\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: sending LV_EVENT_DRAW_MAIN_END\r\n");
     lv_obj_send_event(obj, LV_EVENT_DRAW_MAIN_END, layer);
+    serial_printf(2, "[REFR] lv_obj_redraw: LV_EVENT_DRAW_MAIN_END returned\r\n");
 #if LV_USE_REFR_DEBUG
     lv_color_t debug_color = lv_color_make(lv_rand(0, 0xFF), lv_rand(0, 0xFF), lv_rand(0, 0xFF));
     lv_draw_rect_dsc_t draw_dsc;
@@ -508,13 +515,20 @@ lv_obj_t * lv_refr_get_top_obj(const lv_area_t * area_p, lv_obj_t * obj)
 
 void lv_obj_refr(lv_layer_t * layer, lv_obj_t * obj)
 {
+    serial_printf(2, "[REFR] lv_obj_refr: called obj=%p\r\n", obj);
     LV_ASSERT_NULL(layer);
     LV_ASSERT_NULL(obj);
-    if(lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) return;
+    if(lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) {
+        serial_printf(2, "[REFR] lv_obj_refr: obj is HIDDEN, returning\r\n");
+        return;
+    }
 
     /*If `opa_layered != LV_OPA_COVER` draw the widget on a new layer and blend that layer with the given opacity.*/
     const lv_opa_t opa_layered = lv_obj_get_style_opa_layered(obj, LV_PART_MAIN);
-    if(opa_layered <= LV_OPA_MIN) return;
+    if(opa_layered <= LV_OPA_MIN) {
+        serial_printf(2, "[REFR] lv_obj_refr: opa_layered too small, returning\r\n");
+        return;
+    }
 
     const lv_opa_t layer_opa_ori = layer->opa;
     const lv_color32_t layer_recolor = layer->recolor;
@@ -528,8 +542,11 @@ void lv_obj_refr(lv_layer_t * layer, lv_obj_t * obj)
     layer->recolor = lv_obj_style_apply_recolor(obj, LV_PART_MAIN, layer->recolor);
 
     lv_layer_type_t layer_type = lv_obj_get_layer_type(obj);
+    serial_printf(2, "[REFR] lv_obj_refr: layer_type=%d\r\n", layer_type);
     if(layer_type == LV_LAYER_TYPE_NONE) {
+        serial_printf(2, "[REFR] lv_obj_refr: calling lv_obj_redraw\r\n");
         lv_obj_redraw(layer, obj);
+        serial_printf(2, "[REFR] lv_obj_refr: lv_obj_redraw returned\r\n");
     }
 #if LV_DRAW_TRANSFORM_USE_MATRIX
     /*If the layer opa is full then use the matrix transform*/
@@ -621,6 +638,7 @@ void lv_obj_refr(lv_layer_t * layer, lv_obj_t * obj)
     /* Restore the original layer opa and recolor */
     layer->opa = layer_opa_ori;
     layer->recolor = layer_recolor;
+    serial_printf(2, "[REFR] lv_obj_refr: returning\r\n");
 }
 
 /**********************
@@ -790,6 +808,7 @@ static void refr_sync_areas(void)
  */
 static void refr_invalid_areas(void)
 {
+    serial_printf(2, "[REFR] refr_invalid_areas: inv_p=%d\r\n", disp_refr->inv_p);
     if(disp_refr->inv_p == 0) return;
     LV_PROFILER_REFR_BEGIN;
 
@@ -810,9 +829,12 @@ static void refr_invalid_areas(void)
     disp_refr->last_part = 0;
     disp_refr->rendering_in_progress = true;
 
+    serial_printf(2, "[REFR] refr_invalid_areas: starting loop, inv_p=%d\r\n", disp_refr->inv_p);
     for(i = 0; i < (int32_t)disp_refr->inv_p; i++) {
         /*Refresh the unjoined areas*/
         if(disp_refr->inv_area_joined[i]) continue;
+
+        serial_printf(2, "[REFR] refr_invalid_areas: processing area %d\r\n", i);
 
         if(i == last_i) disp_refr->last_area = 1;
         disp_refr->last_part = 0;
@@ -838,9 +860,12 @@ static void refr_invalid_areas(void)
                 if(sub_area.y2 > inv_a.y2) sub_area.y2 = inv_a.y2;
                 row_last = sub_area.y2;
                 if(inv_a.y2 == row_last) disp_refr->last_part = 1;
+                serial_printf(2, "[REFR] refr_invalid_areas: calling refr_area\r\n");
                 refr_area(&sub_area, y_off);
+                serial_printf(2, "[REFR] refr_invalid_areas: refr_area returned, calling draw_buf_flush\r\n");
                 y_off += lv_area_get_height(&sub_area);
                 draw_buf_flush(disp_refr);
+                serial_printf(2, "[REFR] refr_invalid_areas: draw_buf_flush returned\r\n");
             }
 
             /*If the last y coordinates are not handled yet ...*/
@@ -862,9 +887,12 @@ static void refr_invalid_areas(void)
         }
     }
 
+    serial_printf(2, "[REFR] refr_invalid_areas: sending LV_EVENT_RENDER_READY\r\n");
     lv_display_send_event(disp_refr, LV_EVENT_RENDER_READY, NULL);
+    serial_printf(2, "[REFR] refr_invalid_areas: LV_EVENT_RENDER_READY sent\r\n");
     disp_refr->rendering_in_progress = false;
     LV_PROFILER_REFR_END;
+    serial_printf(2, "[REFR] refr_invalid_areas: returning\r\n");
 }
 
 /**
@@ -890,6 +918,8 @@ static void layer_reshape_draw_buf(lv_layer_t * layer, uint32_t stride)
 static void refr_area(const lv_area_t * area_p, int32_t y_offset)
 {
     LV_PROFILER_REFR_BEGIN;
+    serial_printf(2, "[REFR] refr_area: called with area (%d,%d,%d,%d) y_offset=%d\r\n",
+                  area_p->x1, area_p->y1, area_p->x2, area_p->y2, y_offset);
     lv_layer_t * layer = disp_refr->layer_head;
     layer->draw_buf = disp_refr->buf_act;
     layer->_clip_area = *area_p;
@@ -936,7 +966,9 @@ static void refr_area(const lv_area_t * area_p, int32_t y_offset)
     }
 
     if(tile_cnt == 1) {
+        serial_printf(2, "[REFR] refr_area: calling refr_configured_layer\r\n");
         refr_configured_layer(layer);
+        serial_printf(2, "[REFR] refr_area: refr_configured_layer returned\r\n");
         layer->all_tasks_added = true;
     }
     else {
@@ -995,12 +1027,14 @@ static void refr_area(const lv_area_t * area_p, int32_t y_offset)
     }
 
     disp_refr->refreshed_area = *area_p;
+    serial_printf(2, "[REFR] refr_area: returning\r\n");
     LV_PROFILER_REFR_END;
 }
 
 static void refr_configured_layer(lv_layer_t * layer)
 {
     LV_PROFILER_REFR_BEGIN;
+    serial_printf(2, "[REFR] refr_configured_layer: called\r\n");
 
     lv_layer_reset(layer);
 
@@ -1065,32 +1099,44 @@ static void refr_configured_layer(lv_layer_t * layer)
     /* In single buffered mode wait here until the buffer is freed.
      * Else we would draw into the buffer while it's still being transferred to the display*/
     if(!lv_display_is_double_buffered(disp_refr)) {
+        serial_printf(2, "[REFR] refr_configured_layer: calling wait_for_flushing (single buffered)\r\n");
         wait_for_flushing(disp_refr);
+        serial_printf(2, "[REFR] refr_configured_layer: wait_for_flushing returned\r\n");
+    }
+    else {
+        serial_printf(2, "[REFR] refr_configured_layer: double buffered, skipping wait_for_flushing\r\n");
     }
     /*If the screen is transparent initialize it when the flushing is ready*/
     if(lv_color_format_has_alpha(disp_refr->color_format)) {
+        serial_printf(2, "[REFR] refr_configured_layer: alpha format, clearing\r\n");
         lv_area_t clear_area = layer->_clip_area;
         lv_area_move(&clear_area, -layer->buf_area.x1, -layer->buf_area.y1);
         lv_draw_buf_clear(layer->draw_buf, &clear_area);
     }
 
+    serial_printf(2, "[REFR] refr_configured_layer: about to call lv_refr_get_top_obj\r\n");
     lv_obj_t * top_act_scr = NULL;
     lv_obj_t * top_prev_scr = NULL;
 
     /*Get the most top object which is not covered by others*/
     top_act_scr = lv_refr_get_top_obj(&layer->_clip_area, lv_display_get_screen_active(disp_refr));
+    serial_printf(2, "[REFR] refr_configured_layer: lv_refr_get_top_obj returned, top_act_scr=%p\r\n", top_act_scr);
     if(disp_refr->prev_scr) {
         top_prev_scr = lv_refr_get_top_obj(&layer->_clip_area, disp_refr->prev_scr);
     }
 
     /*Draw a bottom layer background if there is no top object*/
     if(top_act_scr == NULL && top_prev_scr == NULL) {
+        serial_printf(2, "[REFR] refr_configured_layer: calling refr_obj_and_children for bottom layer\r\n");
         refr_obj_and_children(layer, lv_display_get_layer_bottom(disp_refr));
+        serial_printf(2, "[REFR] refr_configured_layer: refr_obj_and_children(bottom) returned\r\n");
     }
 
     if(disp_refr->draw_prev_over_act) {
         if(top_act_scr == NULL) top_act_scr = disp_refr->act_scr;
+        serial_printf(2, "[REFR] refr_configured_layer: calling refr_obj_and_children for top_act_scr\r\n");
         refr_obj_and_children(layer, top_act_scr);
+        serial_printf(2, "[REFR] refr_configured_layer: refr_obj_and_children(top_act_scr) returned\r\n");
 
         /*Refresh the previous screen if any*/
         if(disp_refr->prev_scr) {
@@ -1106,12 +1152,18 @@ static void refr_configured_layer(lv_layer_t * layer)
         }
 
         if(top_act_scr == NULL) top_act_scr = disp_refr->act_scr;
+        serial_printf(2, "[REFR] refr_configured_layer: calling refr_obj_and_children for act_scr\r\n");
         refr_obj_and_children(layer, top_act_scr);
+        serial_printf(2, "[REFR] refr_configured_layer: refr_obj_and_children(act_scr) returned\r\n");
     }
 
     /*Also refresh top and sys layer unconditionally*/
+    serial_printf(2, "[REFR] refr_configured_layer: calling refr_obj_and_children for top_layer\r\n");
     refr_obj_and_children(layer, lv_display_get_layer_top(disp_refr));
+    serial_printf(2, "[REFR] refr_configured_layer: refr_obj_and_children(top_layer) returned\r\n");
+    serial_printf(2, "[REFR] refr_configured_layer: calling refr_obj_and_children for sys_layer\r\n");
     refr_obj_and_children(layer, lv_display_get_layer_sys(disp_refr));
+    serial_printf(2, "[REFR] refr_configured_layer: refr_obj_and_children(sys_layer) returned\r\n");
 
     LV_PROFILER_REFR_END;
 }
@@ -1123,6 +1175,7 @@ static void refr_configured_layer(lv_layer_t * layer)
  */
 static void refr_obj_and_children(lv_layer_t * layer, lv_obj_t * top_obj)
 {
+    serial_printf(2, "[REFR] refr_obj_and_children: called with top_obj=%p\r\n", top_obj);
     /*Normally always will be a top_obj (at least the screen)
      *but in special cases (e.g. if the screen has alpha) it won't.
      *In this case use the screen directly*/
@@ -1134,7 +1187,9 @@ static void refr_obj_and_children(lv_layer_t * layer, lv_obj_t * top_obj)
     lv_obj_t * parent;
     lv_obj_t * border_p = top_obj;
 
+    serial_printf(2, "[REFR] refr_obj_and_children: calling lv_obj_get_parent\r\n");
     parent = lv_obj_get_parent(top_obj);
+    serial_printf(2, "[REFR] refr_obj_and_children: parent=%p\r\n", parent);
 
     /*Calculate the recolor before the parent*/
     if(parent) {
@@ -1142,7 +1197,9 @@ static void refr_obj_and_children(lv_layer_t * layer, lv_obj_t * top_obj)
     }
 
     /*Refresh the top object and its children*/
+    serial_printf(2, "[REFR] refr_obj_and_children: calling lv_obj_refr\r\n");
     lv_obj_refr(layer, top_obj);
+    serial_printf(2, "[REFR] refr_obj_and_children: lv_obj_refr returned\r\n");
 
     /*Do until not reach the screen*/
     while(parent != NULL) {

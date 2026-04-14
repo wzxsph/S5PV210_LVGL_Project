@@ -27,6 +27,7 @@
 #include "../tick/lv_tick.h"
 #include "../stdlib/lv_string.h"
 #include "lv_obj_draw_private.h"
+#include <s5pv210-serial-stdio.h>
 
 /*********************
  *      DEFINES
@@ -748,6 +749,7 @@ static void lv_obj_draw(lv_event_t * e)
         info->res = LV_COVER_RES_COVER;
     }
     else if(code == LV_EVENT_DRAW_MAIN) {
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: obj=%p\r\n", obj);
         lv_layer_t * layer = lv_event_get_layer(e);
 
         lv_draw_rect_dsc_t draw_dsc;
@@ -776,8 +778,9 @@ static void lv_obj_draw(lv_event_t * e)
             draw_dsc.border_post = 1;
         }
 
-
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_draw_rect\r\n");
         lv_draw_rect(layer, &draw_dsc, &coords);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_draw_rect returned\r\n");
     }
     else if(code == LV_EVENT_DRAW_MAIN_END) {
         /*Draw the non backdrop blur when the main content is rendered the the children are not yet */
