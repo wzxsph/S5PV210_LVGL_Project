@@ -181,6 +181,14 @@ int main(int argc, char * argv[])
 		}
 	}
 
+	/* 8. 强制刷新LVGL以渲染标签 */
+	debug_printf("[TEST2] Forcing LVGL render...\r\n");
+	lv_timer_handler();
+	mdelay(100);
+	s5pv210_screen_swap();
+	s5pv210_screen_flush();
+	debug_printf("[TEST2] LVGL render complete.\r\n");
+
 	/* 8. 进入 LVGL 主循环 */
 	debug_printf("[LOOP] Entering LVGL main loop with lv_timer_handler()...\r\n");
 	debug_printf("============================================\r\n\r\n");
