@@ -11,7 +11,8 @@
       "Bash(powershell -ExecutionPolicy Bypass -File auto_test.ps1 2>&1)",
       "Bash(powershell -ExecutionPolicy Bypass -File auto_test.ps1)",
       "Bash(rm -f .obj/source/main.o)",
-      "Bash(make)"
+      "Bash(make)",
+      "Bash(find /c/Users/ihao8/Desktop/maybe/LVGL_baseS5PV210_20260407 -name *.md)"
     ]
   }
 }

@@ -16,6 +16,7 @@
 #include "../display/lv_display_private.h"
 #include "lv_refr_private.h"
 #include "../core/lv_global.h"
+#include <s5pv210-serial-stdio.h>
 
 /*********************
  *      DEFINES
@@ -380,6 +381,7 @@ void lv_obj_mark_layout_as_dirty(lv_obj_t * obj)
 
 void lv_obj_update_layout(const lv_obj_t * obj)
 {
+    serial_printf(2, "[LAYOUT] lv_obj_update_layout called, obj=%p\r\n", obj);
     if(update_layout_mutex) {
         LV_LOG_TRACE("Already running, returning");
         return;
@@ -391,10 +393,12 @@ void lv_obj_update_layout(const lv_obj_t * obj)
     /*Repeat until there are no more layout invalidations*/
     while(scr->scr_layout_inv) {
         LV_LOG_TRACE("Layout update begin");
+        serial_printf(2, "[LAYOUT] Loop iteration, scr=%p scr_layout_inv was 1, clearing\r\n", scr);
         scr->scr_layout_inv = 0;
         layout_update_core(scr);
-        LV_LOG_TRACE("Layout update end");
+        serial_printf(2, "[LAYOUT] layout_update_core returned, scr_layout_inv=%d\r\n", scr->scr_layout_inv);
     }
+    serial_printf(2, "[LAYOUT] lv_obj_update_layout finished\r\n");
 
     lv_display_t * disp = lv_obj_get_display(scr);
     lv_display_send_event(disp, LV_EVENT_UPDATE_LAYOUT_COMPLETED, NULL);

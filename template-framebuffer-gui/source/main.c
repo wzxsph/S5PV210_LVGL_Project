@@ -142,8 +142,15 @@ int main(int argc, char * argv[])
 	lv_port_disp_init();
 	debug_printf("[DISP] lv_port_disp_init() returned!\r\n");
 
-	/* 5. 测试1：先手动写 RGB 条纹验证 LCD 硬件 */
-	debug_printf("[TEST1] Manual RGB stripe test to verify LCD hardware...\r\n");
+	/* 5. 测试1：空白屏幕 + lv_timer_handler with delays */
+	debug_printf("[TEST1] Testing lv_timer_handler on empty screen (no label)...\r\n");
+	for (int i = 0; i < 5; i++) {
+		debug_printf("[TEST1] lv_timer_handler call #%d...\r\n", i);
+		lv_timer_handler();
+		debug_printf("[TEST1] lv_timer_handler #%d returned. flush=%lu\r\n", i, (unsigned long)flush_count);
+		mdelay(20);
+	}
+	debug_printf("[TEST1] All lv_timer_handler calls done!\r\n");
 	{
 		extern struct surface_t * s5pv210_screen_surface(void);
 		struct surface_t * surf = s5pv210_screen_surface();

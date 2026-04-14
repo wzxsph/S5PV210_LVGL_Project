@@ -23,6 +23,7 @@
 #include "../draw/lv_draw_private.h"
 #include "../stdlib/lv_string.h"
 #include "lv_global.h"
+#include <s5pv210-serial-stdio.h>
 
 /*********************
  *      DEFINES
@@ -399,23 +400,16 @@ void lv_display_refr_timer(lv_timer_t * tmr)
         return;
     }
 
-    LV_LOG_ERROR("refr_timer: event REFR_START ok, updating layout...");
-
     /*Refresh the screen's layout if required*/
     LV_PROFILER_LAYOUT_BEGIN_TAG("layout");
-    LV_LOG_ERROR("refr_timer: calling lv_obj_update_layout(act_scr)...");
+    serial_printf(2, "[REFR] Calling lv_obj_update_layout on act_scr=%p\r\n", disp_refr->act_scr);
     lv_obj_update_layout(disp_refr->act_scr);
-    LV_LOG_ERROR("refr_timer: act_scr layout done");
+    serial_printf(2, "[REFR] lv_obj_update_layout(act_scr) returned\r\n");
     if(disp_refr->prev_scr) lv_obj_update_layout(disp_refr->prev_scr);
-
-    LV_LOG_ERROR("refr_timer: calling lv_obj_update_layout(bottom_layer)...");
     lv_obj_update_layout(disp_refr->bottom_layer);
-    LV_LOG_ERROR("refr_timer: calling lv_obj_update_layout(top_layer)...");
     lv_obj_update_layout(disp_refr->top_layer);
-    LV_LOG_ERROR("refr_timer: calling lv_obj_update_layout(sys_layer)...");
     lv_obj_update_layout(disp_refr->sys_layer);
     LV_PROFILER_LAYOUT_END_TAG("layout");
-    LV_LOG_ERROR("refr_timer: all layouts done, inv_p=%d", disp_refr->inv_p);
 
     /*Do nothing if there is no active screen*/
     if(disp_refr->act_scr == NULL) {
@@ -424,9 +418,15 @@ void lv_display_refr_timer(lv_timer_t * tmr)
         goto refr_finish;
     }
 
+    serial_printf(2, "[REFR] About to call lv_refr_join_area\r\n");
     lv_refr_join_area();
+    serial_printf(2, "[REFR] lv_refr_join_area returned\r\n");
+    serial_printf(2, "[REFR] About to call refr_sync_areas\r\n");
     refr_sync_areas();
+    serial_printf(2, "[REFR] refr_sync_areas returned\r\n");
+    serial_printf(2, "[REFR] About to call refr_invalid_areas\r\n");
     refr_invalid_areas();
+    serial_printf(2, "[REFR] refr_invalid_areas returned, inv_p=%d\r\n", disp_refr->inv_p);
 
     if(disp_refr->inv_p == 0) goto refr_finish;
     /*In double buffered direct mode or if sync callback is set, save the updated areas.
@@ -448,15 +448,19 @@ void lv_display_refr_timer(lv_timer_t * tmr)
     disp_refr->inv_p = 0;
 
 refr_finish:
+    serial_printf(2, "[REFR] Reached refr_finish\r\n");
 
 #if LV_DRAW_SW_COMPLEX == 1
     lv_draw_sw_mask_cleanup();
 #endif
 
+    serial_printf(2, "[REFR] Sending LV_EVENT_REFR_READY\r\n");
     lv_display_send_event(disp_refr, LV_EVENT_REFR_READY, NULL);
+    serial_printf(2, "[REFR] LV_EVENT_REFR_READY sent\r\n");
 
     LV_TRACE_REFR("finished");
     LV_PROFILER_REFR_END;
+    serial_printf(2, "[REFR] lv_display_refr_timer about to return\r\n");
 }
 
 /**

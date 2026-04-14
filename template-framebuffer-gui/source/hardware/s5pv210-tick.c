@@ -39,6 +39,9 @@ static void timer_interrupt(void * data)
 	/* tick count */
 	jiffies++;
 
+	/* Notify LVGL that 10ms have passed */
+	lv_tick_inc(10);
+
 	/* clear interrupt status bit */
 	writel(S5PV210_TINT_CSTAT, (readl(S5PV210_TINT_CSTAT) & ~(0x1f<<5)) | (0x01<<9));
 }
