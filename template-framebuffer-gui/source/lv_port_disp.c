@@ -53,8 +53,10 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 
 	flush_count++;
 
-	/* 调试：每次调用都打印 */
-	disp_debug("[FLUSH] CALLED #%lu\r\n", (unsigned long)flush_count);
+	/* 调试：打印确认 flush_cb 被调用 */
+	disp_debug("[FLUSH] #");
+	disp_debug("%lu", (unsigned long)flush_count);
+	disp_debug(" called\r\n");
 
 	/* 获取 Framebuffer 首地址 */
 	surface = s5pv210_screen_surface();

@@ -29,6 +29,7 @@
 #include <s5pv210-irq.h>
 #include <s5pv210/reg-timer.h>
 #include <s5pv210-tick.h>
+#include "lvgl/lvgl.h"
 
 volatile u32_t jiffies = 0;
 static u32_t tick_hz = 0;

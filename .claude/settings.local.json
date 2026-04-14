@@ -8,7 +8,10 @@
       "Bash(make -C template-framebuffer-gui clean)",
       "Bash(make -C template-framebuffer-gui -j8)",
       "Bash(make -j20)",
-      "Bash(powershell -ExecutionPolicy Bypass -File auto_test.ps1 2>&1)"
+      "Bash(powershell -ExecutionPolicy Bypass -File auto_test.ps1 2>&1)",
+      "Bash(powershell -ExecutionPolicy Bypass -File auto_test.ps1)",
+      "Bash(rm -f .obj/source/main.o)",
+      "Bash(make)"
     ]
   }
 }

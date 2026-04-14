@@ -116,6 +116,11 @@ int main(int argc, char * argv[])
 	lv_log_register_print_cb(my_log_print_cb);
 	debug_printf("[LVGL] Log callback registered\r\n");
 
+	/* 测试：调用 lv_timer_handler 在 display 创建之前 */
+	debug_printf("[TEST0] lv_timer_handler test BEFORE display create...\r\n");
+	lv_timer_handler();
+	debug_printf("[TEST0] lv_timer_handler returned (this is expected to work)\r\n");
+
 	/* 3. 注册 Tick 回调 */
 	debug_printf("[LVGL] Registering tick callback (jiffies->ms)...\r\n");
 	lv_tick_set_cb(get_system_time_ms);
@@ -175,18 +180,16 @@ int main(int argc, char * argv[])
 			lv_label_set_text(label, "Hello S5PV210!");
 			lv_obj_center(label);
 			lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-			debug_printf("[TEST2] Label created and centered.\r\n");
+			debug_printf("[TEST2] Label created.\r\n");
 		} else {
 			debug_printf("[TEST2] ERROR: Failed to create label!\r\n");
 		}
 	}
 
-	/* 8. 强制刷新LVGL以渲染标签 */
-	debug_printf("[TEST2] Forcing LVGL render...\r\n");
+	/* 8. 测试 lv_timer_handler - 无任何对象 */
+	debug_printf("[TEST2] Calling lv_timer_handler() with no objects...\r\n");
 	lv_timer_handler();
-	lv_timer_handler();
-	mdelay(200);
-	debug_printf("[TEST2] LVGL render complete. Screen should show 'Hello S5PV210!'.\r\n");
+	debug_printf("[TEST2] Done. This line should print if lv_timer_handler returns.\r\n");
 
 	/* 8. 进入 LVGL 主循环 */
 	debug_printf("[LOOP] Entering LVGL main loop with lv_timer_handler()...\r\n");
