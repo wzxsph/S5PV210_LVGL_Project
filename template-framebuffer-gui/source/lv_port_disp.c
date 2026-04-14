@@ -53,6 +53,9 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 
 	flush_count++;
 
+	/* 调试：每次调用都打印 */
+	disp_debug("[FLUSH] CALLED #%lu\r\n", (unsigned long)flush_count);
+
 	/* 获取 Framebuffer 首地址 */
 	surface = s5pv210_screen_surface();
 
@@ -145,7 +148,7 @@ void lv_port_disp_init(void)
 	disp_debug("[DISP_INIT] After lv_display_create()...\r\n");
 
 	disp_debug("[DISP_INIT] lv_display_create() returned: 0x%08X\r\n", (unsigned int)disp);
-	
+
 	if (!disp) {
 		disp_debug("[DISP_INIT] FATAL: lv_display_create() returned NULL!\r\n");
 		disp_debug("[DISP_INIT] Possible causes:\r\n");
@@ -156,6 +159,10 @@ void lv_port_disp_init(void)
 		while(1);  /* 停止执行 */
 	}
 	disp_debug("[DISP_INIT] Display object created successfully: 0x%08X\r\n", (unsigned int)disp);
+
+	/* 设置此 display 为默认 display */
+	lv_display_set_default(disp);
+	disp_debug("[DISP_INIT] Display set as default\r\n");
 
 	/* 2. 设置颜色格式为 XRGB8888（与 LCD 32bpp 一致） */
 	lv_display_set_color_format(disp, LV_COLOR_FORMAT_XRGB8888);
