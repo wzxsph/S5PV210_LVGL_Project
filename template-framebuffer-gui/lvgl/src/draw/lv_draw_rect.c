@@ -13,6 +13,7 @@
 #include "../misc/lv_text_private.h"
 #include "../core/lv_obj_event.h"
 #include "../stdlib/lv_string.h"
+#include <s5pv210-serial-stdio.h>
 
 /*********************
  *      DEFINES
@@ -40,14 +41,26 @@
 
 void LV_ATTRIBUTE_FAST_MEM lv_draw_rect_dsc_init(lv_draw_rect_dsc_t * dsc)
 {
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_memzero\r\n");
     lv_memzero(dsc, sizeof(lv_draw_rect_dsc_t));
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: lv_memzero done\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_white\r\n");
     dsc->bg_color = lv_color_white();
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: lv_color_white done\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_white for stop[0]\r\n");
     dsc->bg_grad.stops[0].color = lv_color_white();
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: stop[0].color done\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_black for stop[1]\r\n");
     dsc->bg_grad.stops[1].color = lv_color_black();
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: stop[1].color done\r\n");
     dsc->bg_grad.stops[1].frac = 0xFF;
     dsc->bg_grad.stops_count = 2;
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_black for border_color\r\n");
     dsc->border_color = lv_color_black();
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: border_color done\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_black for shadow_color\r\n");
     dsc->shadow_color = lv_color_black();
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: shadow_color done\r\n");
     dsc->bg_image_symbol_font = LV_FONT_DEFAULT;
     dsc->bg_opa = LV_OPA_COVER;
     dsc->bg_image_opa = LV_OPA_COVER;
@@ -56,6 +69,7 @@ void LV_ATTRIBUTE_FAST_MEM lv_draw_rect_dsc_init(lv_draw_rect_dsc_t * dsc)
     dsc->shadow_opa = LV_OPA_COVER;
     dsc->border_side = LV_BORDER_SIDE_FULL;
     dsc->base.dsc_size = sizeof(lv_draw_rect_dsc_t);
+    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: ALL DONE\r\n");
 }
 
 void lv_draw_fill_dsc_init(lv_draw_fill_dsc_t * dsc)
@@ -156,7 +170,7 @@ void lv_draw_box_shadow(lv_layer_t * layer, const lv_draw_box_shadow_dsc_t * dsc
 
 void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
 {
-
+    serial_printf(2, "[DRAW] lv_draw_rect: called\r\n");
     LV_PROFILER_DRAW_BEGIN;
 
     bool has_shadow;
@@ -217,7 +231,9 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
     /*Shadow*/
     if(has_shadow) {
         /*Check whether the shadow is visible*/
+        serial_printf(2, "[DRAW] lv_draw_rect: adding shadow task\r\n");
         t = lv_draw_add_task(layer, coords, LV_DRAW_TASK_TYPE_BOX_SHADOW);
+        serial_printf(2, "[DRAW] lv_draw_rect: shadow task added\r\n");
         lv_draw_box_shadow_dsc_t * shadow_dsc = t->draw_dsc;
 
         lv_area_increase(&t->_real_area, dsc->shadow_spread, dsc->shadow_spread);

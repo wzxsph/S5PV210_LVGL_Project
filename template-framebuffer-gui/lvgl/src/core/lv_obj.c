@@ -750,19 +750,33 @@ static void lv_obj_draw(lv_event_t * e)
     }
     else if(code == LV_EVENT_DRAW_MAIN) {
         serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: obj=%p\r\n", obj);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_event_get_layer\r\n");
         lv_layer_t * layer = lv_event_get_layer(e);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_event_get_layer returned, layer=%p\r\n", layer);
 
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_draw_rect_dsc_init\r\n");
         lv_draw_rect_dsc_t draw_dsc;
         lv_draw_rect_dsc_init(&draw_dsc);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_draw_rect_dsc_init done\r\n");
         draw_dsc.base.layer = layer;
 
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_obj_get_style_transform_width\r\n");
         int32_t w = lv_obj_get_style_transform_width(obj, LV_PART_MAIN);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_obj_get_style_transform_width returned w=%d\r\n", w);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_obj_get_style_transform_height\r\n");
         int32_t h = lv_obj_get_style_transform_height(obj, LV_PART_MAIN);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_obj_get_style_transform_height returned h=%d\r\n", h);
         lv_area_t coords;
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_area_copy\r\n");
         lv_area_copy(&coords, &obj->coords);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_area_copy done\r\n");
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_area_increase\r\n");
         lv_area_increase(&coords, w, h);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_area_increase done\r\n");
 
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_obj_get_style_blur_backdrop\r\n");
         bool backdrop_blur = lv_obj_get_style_blur_backdrop(obj, LV_PART_MAIN);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_obj_get_style_blur_backdrop returned backdrop_blur=%d\r\n", backdrop_blur);
         if(backdrop_blur) {
             lv_draw_blur_dsc_t blur_dsc;
             lv_draw_blur_dsc_init(&blur_dsc);
@@ -772,13 +786,17 @@ static void lv_obj_draw(lv_event_t * e)
             lv_draw_blur(layer, &blur_dsc, &coords);
         }
 
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_obj_init_draw_rect_dsc\r\n");
         lv_obj_init_draw_rect_dsc(obj, LV_PART_MAIN, &draw_dsc);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_obj_init_draw_rect_dsc done\r\n");
         /*If the border is drawn later disable loading its properties*/
         if(lv_obj_get_style_border_post(obj, LV_PART_MAIN)) {
             draw_dsc.border_post = 1;
         }
 
         serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_draw_rect\r\n");
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: coords (%d,%d,%d,%d)\r\n", coords.x1, coords.y1, coords.x2, coords.y2);
+        serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: calling lv_draw_rect NOW\r\n");
         lv_draw_rect(layer, &draw_dsc, &coords);
         serial_printf(2, "[OBJ_DRAW] LV_EVENT_DRAW_MAIN: lv_draw_rect returned\r\n");
     }
