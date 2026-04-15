@@ -40,11 +40,16 @@ static void disp_debug(const char * fmt, ...)
 
 /*-----------------------------------------------------
  * flush_cb: 将 LVGL 渲染好的像素数据写入 Framebuffer
- * 
+ *
  * S5PV210 LCD 控制器已配置为 RGB_P 模式 + WORD SWAP，
  * 像素格式为 XRGB8888（字节序：B[0] G[1] R[2] X[3]），
  * 与 LVGL 的 LV_COLOR_FORMAT_XRGB8888 完全匹配，
  * 因此可以直接 memcpy，无需逐像素转换。
+ *
+ * 关键修复：按照 ARM Demo 的工作流程，需要调用：
+ *   screen_swap() - 切换前后缓冲区，更新 surface.pixels
+ *   screen_flush() - 更新 FIMD 缓冲区地址寄存器
+ * 否则 FIMD 不知道 LVGL 写入的是哪个缓冲区，导致 LCD 黑屏。
  *----------------------------------------------------*/
 static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_map)
 {
@@ -81,12 +86,27 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 	uint32_t dst_stride = MY_DISP_HOR_RES;  /* framebuffer 行步长（像素） */
 	uint32_t src_stride = w;                 /* LVGL 渲染缓冲区行步长（像素） */
 
+	/* ARM Demo 风格的缓冲区切换：
+	 * 1. screen_swap() 切换 vram_front/vram_back，更新 surface.pixels
+	 * 2. memcpy 将渲染数据写入新的 back buffer
+	 * 3. screen_flush() 更新 FIMD 的缓冲区地址寄存器
+	 * 这样可以避免 FIMD 正在扫描的缓冲区被同时写入（防止撕裂）*/
+	s5pv210_screen_swap();
+
+	/* 重新获取 surface->pixels（screen_swap 后已更新为新的 back buffer）*/
+	surface = s5pv210_screen_surface();
+	fb_base = (uint32_t *)surface->pixels;
+	dst = fb_base + area->y1 * MY_DISP_HOR_RES + area->x1;
+
 	/* 行级复制：每行用 memcpy 一次性拷贝 */
 	for (int32_t y = 0; y < h; y++) {
 		memcpy(dst, src, w * 4);
 		dst += dst_stride;
 		src += src_stride;
 	}
+
+	/* 更新 FIMD 缓冲区地址，使 FIMD 知道从新缓冲区扫描像素显示 */
+	s5pv210_screen_flush();
 
 	/* 首帧和定期调试输出 */
 	if (flush_count <= 3 || (get_system_time_ms() - last_flush_debug) >= 5000) {
@@ -133,7 +153,7 @@ void lv_port_disp_init(void)
 	/* 1. 创建显示设备对象 */
 	disp_debug("[DISP_INIT] Creating display object...\r\n");
 	disp_debug("[DISP_INIT] About to call lv_display_create(%d, %d)...\r\n", MY_DISP_HOR_RES, MY_DISP_VER_RES);
-	
+
 	/* 检查LVGL内存状态 */
 	{
 		lv_mem_monitor_t mon;
@@ -144,7 +164,7 @@ void lv_port_disp_init(void)
 		disp_debug("[DISP_INIT]   Used: %zu bytes (%d%%)\r\n", mon.total_size - mon.free_size, mon.used_pct);
 		disp_debug("[DISP_INIT]   Biggest free: %zu bytes\r\n", mon.free_biggest_size);
 	}
-	
+
 	disp_debug("[DISP_INIT] Before lv_display_create()...\r\n");
 	disp = lv_display_create(MY_DISP_HOR_RES, MY_DISP_VER_RES);
 	disp_debug("[DISP_INIT] After lv_display_create()...\r\n");
@@ -174,7 +194,7 @@ void lv_port_disp_init(void)
 	disp_debug("[DISP_INIT] Setting render buffers...\r\n");
 	disp_debug("[DISP_INIT]   buf_1 size=%u bytes\r\n",
 	           (unsigned int)sizeof(buf_1));
-	
+
 	lv_display_set_buffers(disp, buf_1, NULL, sizeof(buf_1),
 	                       LV_DISPLAY_RENDER_MODE_PARTIAL);
 	disp_debug("[DISP_INIT] Render buffers configured\r\n");

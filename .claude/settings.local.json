@@ -12,7 +12,21 @@
       "Bash(powershell -ExecutionPolicy Bypass -File auto_test.ps1)",
       "Bash(rm -f .obj/source/main.o)",
       "Bash(make)",
-      "Bash(find /c/Users/ihao8/Desktop/maybe/LVGL_baseS5PV210_20260407 -name *.md)"
+      "Bash(find /c/Users/ihao8/Desktop/maybe/LVGL_baseS5PV210_20260407 -name *.md)",
+      "Bash(xxd)",
+      "Bash(sed -i '874d' lvgl/src/core/lv_refr.c)",
+      "Bash(sed -i 's/LV_PROFILER_REFR_END;$/LV_PROFILER_REFR_END;/' lvgl/src/core/lv_refr.c)",
+      "Bash(arm-none-eabi-gcc --version)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -I. -Ilvgl/src -Ilv_conf.h -xc -E lvgl/src/core/lv_global.h)",
+      "Bash(echo '#include \"\"\"\"lvgl/src/core/lv_global.h\"\"\"\":*)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -I. -Ilvgl/src -Ilv_conf.h -xc - -o /dev/null)",
+      "Bash(arm-none-eabi-gcc -xc - -fsyntax-only)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -I. -Ilvgl/src -include lv_conf.h -fsyntax-only -c lvgl/src/core/lv_refr.c)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -g -Wall -O3 -I. -Iinclude -Ilvgl/src -include lv_conf.h -fsyntax-only -c lvgl/src/core/lv_refr.c)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -g -Wall -O3 -I. -Iinclude -Iinclude/hardware -Iinclude/library -Isource/hardware -Ilvgl/src -include lv_conf.h -fsyntax-only -c lvgl/src/core/lv_refr.c)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -g -Wall -O3 -I. -Iinclude -Iinclude/hardware -Iinclude/library -Isource/hardware -Ilvgl/src -Ilvgl -include lv_conf.h -E -dM lvgl/src/core/lv_global.h)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -I. -Iinclude -Iinclude/hardware -Iinclude/library -Isource/hardware -Ilvgl/src -Ilvgl -include lv_conf.h -E lvgl/src/core/lv_refr.c)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -I. -Iinclude -Iinclude/hardware -Iinclude/library -Isource/hardware -Ilvgl/src -Ilvgl -include lv_conf.h -E lvgl/src/core/lv_global.h)"
     ]
   }
 }

@@ -36,7 +36,7 @@ static void debug_printf(const char * fmt, ...)
 static void my_log_print_cb(lv_log_level_t level, const char * buf)
 {
 	const char * level_str;
-	
+
 	switch(level) {
 		case LV_LOG_LEVEL_TRACE: level_str = "[TRACE]"; break;
 		case LV_LOG_LEVEL_INFO:  level_str = "[INFO] "; break;
@@ -45,7 +45,7 @@ static void my_log_print_cb(lv_log_level_t level, const char * buf)
 		case LV_LOG_LEVEL_USER:  level_str = "[USER] "; break;
 		default: level_str = "[LOG]  "; break;
 	}
-	
+
 	debug_printf("%s %s", level_str, buf);
 }
 
@@ -110,7 +110,7 @@ int main(int argc, char * argv[])
 	debug_printf("[LVGL] Calling lv_init()...\r\n");
 	lv_init();
 	debug_printf("[LVGL] lv_init() SUCCESS!\r\n");
-	
+
 	/* 注册 LVGL 日志回调 */
 	debug_printf("[LVGL] Registering log callback...\r\n");
 	lv_log_register_print_cb(my_log_print_cb);
@@ -163,7 +163,11 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	mdelay(2000);  /* 显示2秒让用户确认 */
+	/* 停在这里检查 LCD 是否显示 RGB 条纹（验证Framebuffer+FIMD基本工作）
+	 * 如果看不到条纹，说明 FIMD 初始化有问题
+	 * 如果看到条纹，说明Framebuffer+FIMD工作正常，问题在LVGL渲染/flush流程
+	 * 临时注释掉 while(1) 以继续测试LVGL */
+	// while(1);  /* 调试：停在这里检查LCD */
 	debug_printf("[TEST1] RGB stripe test done. Now testing LVGL rendering...\r\n");
 
 	/* 6. 清屏 - 用黑色覆盖 RGB 条纹 */
