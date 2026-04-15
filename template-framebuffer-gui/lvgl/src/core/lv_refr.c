@@ -448,8 +448,11 @@ refr_finish:
     /* TEMP: Commented out to test if this causes the hang */
     /* lv_display_send_event(disp_refr, LV_EVENT_REFR_READY, NULL); */
 
-    LV_TRACE_REFR("finished");
+    LV_TRACE_REFR("finished step 1");
     LV_PROFILER_REFR_END;
+    LV_TRACE_REFR("finished step 2");
+    /* Here - what happens after? */
+    LV_TRACE_REFR("finished step 3 - returning now");
 }
 
 /**
@@ -1410,9 +1413,14 @@ static void draw_buf_flush(lv_display_t * disp)
      * and other buffer already contains the new rendered image. */
     if(lv_display_is_double_buffered(disp)) {
         wait_for_flushing(disp_refr);
+        /* DEBUG: Add a dummy volatile read to prevent compiler from optimizing away */
+        volatile int x = disp->flushing;
+        (void)x;
     }
 
     disp->flushing = 1;
+    /* DEBUG: confirm we got past wait_for_flushing */
+    LV_LOG_INFO("draw_buf_flush: past wait_for_flushing, flushing=%d", disp->flushing);
 
     if(disp->last_area && disp->last_part) disp->flushing_last = 1;
     else disp->flushing_last = 0;
