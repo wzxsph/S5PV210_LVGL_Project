@@ -273,13 +273,13 @@ int main(int argc, char * argv[])
 
 	/* 创建一个完全扁平的 obj，无圆角无阴影 */
 	lv_obj_t * obj = lv_obj_create(scr);
-	lv_obj_set_size(obj, 200, 60);
-	lv_obj_set_pos(obj, 412, 270);
+	lv_obj_set_size(obj, 20, 10);  /* 32x32 快速测试模式下的小尺寸 */
+	lv_obj_set_pos(obj, 2, 2);     /* 32x32 可见范围内 */
 	/* 移除所有圆角和阴影 */
 	lv_obj_set_style_radius(obj, 0, 0);
 	lv_obj_set_style_shadow_width(obj, 0, 0);
 	lv_obj_set_style_border_width(obj, 0, 0);
-	debug_printf("[UI] Flat object created at (%d, %d)\r\n", 412, 270);
+	debug_printf("[UI] Flat object created at (%d, %d)\r\n", 2, 2);
 
 	/* 强制刷新布局 */
 	debug_printf("[UI] Calling lv_obj_update_layout on screen...\r\n");

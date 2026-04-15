@@ -89,7 +89,7 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 	/* 计算刷新区域的参数 */
 	int32_t w = area->x2 - area->x1 + 1;
 	int32_t h = area->y2 - area->y1 + 1;
-	uint32_t * dst = fb_base + area->y1 * MY_DISP_HOR_RES + area->x1;
+	uint32_t * dst = fb_base + area->y1 * PANEL_HOR_RES + area->x1;
 	uint32_t * src = (uint32_t *)px_map;
 	uint32_t dst_stride = PANEL_HOR_RES;
 	uint32_t src_stride = w;
@@ -106,7 +106,7 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 	/* 重新获取 surface->pixels（现在是新的 back buffer）*/
 	surface = s5pv210_screen_surface();
 	fb_base = (uint32_t *)surface->pixels;
-	dst = fb_base + area->y1 * MY_DISP_HOR_RES + area->x1;
+	dst = fb_base + area->y1 * PANEL_HOR_RES + area->x1;
 
 	/* 行级复制：每行用 memcpy 一次性拷贝 */
 	for (int32_t y = 0; y < h; y++) {

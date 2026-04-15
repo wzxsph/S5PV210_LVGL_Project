@@ -815,8 +815,15 @@ static void refr_invalid_areas(void)
     disp_refr->rendering_in_progress = true;
 
     for(i = 0; i < (int32_t)disp_refr->inv_p; i++) {
+        LV_LOG_USER("PROBE_LOOP: i=%d/%d inv_a[%d]=(%d,%d)-(%d,%d)",
+                   (int)i, (int)disp_refr->inv_p, (int)i,
+                   (int)disp_refr->inv_areas[i].x1, (int)disp_refr->inv_areas[i].y1,
+                   (int)disp_refr->inv_areas[i].x2, (int)disp_refr->inv_areas[i].y2);
         /*Refresh the unjoined areas*/
-        if(disp_refr->inv_area_joined[i]) continue;
+        if(disp_refr->inv_area_joined[i]) {
+            LV_LOG_USER("PROBE_LOOP: area %d is joined, skipping", (int)i);
+            continue;
+        }
 
         if(i == last_i) disp_refr->last_area = 1;
         disp_refr->last_part = 0;
@@ -931,19 +938,24 @@ static void refr_area(const lv_area_t * area_p, int32_t y_offset)
     /*Try to divide the area to smaller tiles*/
     uint32_t tile_cnt = 1;
     int32_t tile_h = lv_area_get_height(area_p);
+    uint32_t area_buf_size = 0;
+    uint32_t max_tile_cnt = disp_refr->tile_cnt;
+    uint32_t total_buf_size = layer->draw_buf->data_size;
     if(LV_COLOR_FORMAT_IS_INDEXED(layer->color_format) == false) {
         /* Assume that the buffer size (can be screen sized or smaller in case of partial mode)
          * and max tile size are the optimal scenario. From this calculate the ideal tile size
          * and set the tile count and tile height accordingly.
          */
-        uint32_t max_tile_cnt = disp_refr->tile_cnt;
-        uint32_t total_buf_size = layer->draw_buf->data_size;
         uint32_t ideal_tile_size = total_buf_size / max_tile_cnt;
-        uint32_t area_buf_size = lv_area_get_size(area_p) * lv_color_format_get_size(layer->color_format);
+        area_buf_size = lv_area_get_size(area_p) * lv_color_format_get_size(layer->color_format);
 
         tile_cnt = (area_buf_size + (ideal_tile_size - 1)) / ideal_tile_size; /*Round up*/
         tile_h = lv_area_get_height(area_p) / tile_cnt;
     }
+
+    LV_LOG_USER("PROBE_REFR_AREA: tile_cnt=%d, max_tile=%d, buf_size=%d, area_buf=%d",
+                (int)tile_cnt, (int)max_tile_cnt, (int)total_buf_size,
+                (int)area_buf_size);
 
     if(tile_cnt == 1) {
         refr_configured_layer(layer);
@@ -1075,9 +1087,7 @@ static void refr_configured_layer(lv_layer_t * layer)
     /* In single buffered mode wait here until the buffer is freed.
      * Else we would draw into the buffer while it's still being transferred to the display*/
     if(!lv_display_is_double_buffered(disp_refr)) {
-        LV_LOG_USER("PROBE_LAYER: single-buffer path before wait_for_flushing");
         wait_for_flushing(disp_refr);
-        LV_LOG_USER("PROBE_LAYER: single-buffer path after wait_for_flushing");
     }
     /*If the screen is transparent initialize it when the flushing is ready*/
     if(lv_color_format_has_alpha(disp_refr->color_format)) {
@@ -1099,33 +1109,48 @@ static void refr_configured_layer(lv_layer_t * layer)
 
     /*Draw a bottom layer background if there is no top object*/
     if(top_act_scr == NULL && top_prev_scr == NULL) {
+        LV_LOG_USER("PROBE_L1: Before Bottom Layer");
         refr_obj_and_children(layer, lv_display_get_layer_bottom(disp_refr));
+        LV_LOG_USER("PROBE_L1: After Bottom Layer");
     }
 
     if(disp_refr->draw_prev_over_act) {
         if(top_act_scr == NULL) top_act_scr = disp_refr->act_scr;
+        LV_LOG_USER("PROBE_L1: Before Active Screen Layer");
         refr_obj_and_children(layer, top_act_scr);
+        LV_LOG_USER("PROBE_L1: After Active Screen Layer");
 
         /*Refresh the previous screen if any*/
         if(disp_refr->prev_scr) {
             if(top_prev_scr == NULL) top_prev_scr = disp_refr->prev_scr;
+            LV_LOG_USER("PROBE_L1: Before Prev Screen Layer");
             refr_obj_and_children(layer, top_prev_scr);
+            LV_LOG_USER("PROBE_L1: After Prev Screen Layer");
         }
     }
     else {
         /*Refresh the previous screen if any*/
         if(disp_refr->prev_scr) {
             if(top_prev_scr == NULL) top_prev_scr = disp_refr->prev_scr;
+            LV_LOG_USER("PROBE_L1: Before Prev Screen Layer");
             refr_obj_and_children(layer, top_prev_scr);
+            LV_LOG_USER("PROBE_L1: After Prev Screen Layer");
         }
 
         if(top_act_scr == NULL) top_act_scr = disp_refr->act_scr;
+        LV_LOG_USER("PROBE_L1: Before Active Screen Layer");
         refr_obj_and_children(layer, top_act_scr);
+        LV_LOG_USER("PROBE_L1: After Active Screen Layer");
     }
 
     /*Also refresh top and sys layer unconditionally*/
+    LV_LOG_USER("PROBE_L1: Before Top Layer");
     refr_obj_and_children(layer, lv_display_get_layer_top(disp_refr));
+    LV_LOG_USER("PROBE_L1: After Top Layer");
+    LV_LOG_USER("PROBE_L1: Before Sys Layer");
     refr_obj_and_children(layer, lv_display_get_layer_sys(disp_refr));
+    LV_LOG_USER("PROBE_L1: After Sys Layer");
+    LV_LOG_USER("PROBE_L1: All Layers Complete");
 
     LV_PROFILER_REFR_END;
 }
