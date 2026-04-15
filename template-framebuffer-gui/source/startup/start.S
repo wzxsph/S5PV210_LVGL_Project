@@ -66,8 +66,30 @@ reset:
 	orr	r0, r0, #0xd3
 	msr	cpsr, r0
 
+	/* Configure CP15 SCTLR to allow unaligned memory accesses.
+	 * Cortex-A8 defaults to strict alignment checking. GCC's optimized
+	 * lv_memzero may generate instructions that access 64-bit (STRD) or
+	 * 128-bit (NEON) quantities at non-64-bit-aligned addresses.
+	 * Clearing bit 1 (A-bit) disables alignment fault checking.
+	 * NOTE: Bit 22 (U-bit) behavior varies; we clear A-bit only. */
+	mrc	p15, 0, r0, c1, c0, 0
+	bic	r0, r0, #(1 << 1)   /* Clear A-bit: disable strict alignment check */
+	mcr	p15, 0, r0, c1, c0, 0
+
 	/* initialize stacks */
 	bl	init_stacks
+
+	/* Enforce 8-byte stack alignment for AAPCS compliance.
+	 * GCC may generate STM/NEON instructions in lv_memzero that require
+	 * 8-byte aligned stack pointer. Without this, Cortex-A8 triggers
+	 * Alignment Fault (Data Abort) on STMDB/STMDA operations. */
+	bic	sp, sp, #7
+
+	/* Set VBAR (Vector Base Address Register) to redirect exceptions
+	 * to our vector table at _start instead of iROM default (0x00000000).
+	 * Without this, any exception falls into iROM's silent deadloop. */
+	ldr	r0, =_start
+	mcr	p15, 0, r0, c12, c0, 0
 
 	/* clear bss section */
 clear_bss:
@@ -91,26 +113,31 @@ init_stacks:
 	orr	r1, r0, #UDF_MODE
 	msr	cpsr_cxsf, r1
 	ldr	sp, _stack_und_end
+	bic	sp, sp, #7		/* Enforce 8-byte alignment */
 
 	bic	r0, r0, #MODE_MASK | NO_INT
 	orr	r1, r0, #ABT_MODE
 	msr	cpsr_cxsf, r1
 	ldr	sp, _stack_abt_end
+	bic	sp, sp, #7		/* Enforce 8-byte alignment */
 
 	bic	r0, r0, #MODE_MASK | NO_INT
 	orr	r1, r0, #IRQ_MODE
 	msr	cpsr_cxsf, r1
 	ldr	sp, _stack_irq_end
+	bic	sp, sp, #7		/* Enforce 8-byte alignment */
 
 	bic	r0, r0, #MODE_MASK | NO_INT
 	orr	r1, r0, #FIQ_MODE
 	msr	cpsr_cxsf, r1
 	ldr	sp, _stack_fiq_end
+	bic	sp, sp, #7		/* Enforce 8-byte alignment */
 
 	bic	r0, r0, #MODE_MASK | NO_INT
 	orr	r1, r0, #SVC_MODE
 	msr	cpsr_cxsf, r1
 	ldr	sp, _stack_srv_end
+	bic	sp, sp, #7		/* Enforce 8-byte alignment */
 	mov	pc, lr
 
 /*

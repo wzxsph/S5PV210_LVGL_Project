@@ -78,6 +78,18 @@ void my_data_abort_handler(unsigned int lr)
 	(void)snprintf(msg, sizeof(msg), "Real PC (LR-8): 0x%08X\r\n", (unsigned int)(lr - 8));
 	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
 
+	/* 读取 DFAR (Data Fault Address Register) - c6,c0,0 */
+	unsigned int dfar;
+	__asm__ volatile("mrc p15, 0, %0, c6, c0, 0" : "=r"(dfar));
+	(void)snprintf(msg, sizeof(msg), "DFAR (fault addr): 0x%08X\r\n", dfar);
+	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
+
+	/* 读取当前 SP */
+	unsigned int sp_val;
+	__asm__ volatile("mov %0, sp" : "=r"(sp_val));
+	(void)snprintf(msg, sizeof(msg), "SP at abort: 0x%08X\r\n", sp_val);
+	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
+
 	s5pv210_serial_write_string(DEBUG_UART_CH, "======================\r\n");
 
 	/* 死循环，保留现场供调试 */

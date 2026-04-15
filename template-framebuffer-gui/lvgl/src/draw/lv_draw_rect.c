@@ -40,6 +40,9 @@
 
 void LV_ATTRIBUTE_FAST_MEM lv_draw_rect_dsc_init(lv_draw_rect_dsc_t * dsc)
 {
+    unsigned int sp_val;
+    __asm__ volatile("mov %0, sp" : "=r"(sp_val));
+    LV_LOG_USER("PROBE_INIT_RECT: ENTER dsc=%p sp=0x%08X align_ok=%d", (void *)dsc, sp_val, (sp_val & 7) == 0);
     lv_memzero(dsc, sizeof(lv_draw_rect_dsc_t));
     dsc->bg_color = lv_color_white();
     dsc->bg_grad.stops[0].color = lv_color_white();
