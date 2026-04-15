@@ -316,6 +316,15 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     lv_draw_task_t * t = NULL;
     t = lv_draw_get_available_task(layer, NULL, DRAW_UNIT_ID_SW);
     if(t == NULL) {
+        /* 探针：打印任务状态 */
+        extern void my_debug_printf(const char * fmt, ...);
+        lv_draw_task_t * tt = layer->draw_task_head;
+        if(tt) {
+            my_debug_printf("\r\n[DEADLOCK] task head type=%d state=%d\r\n",
+                           (int)tt->type, (int)tt->state);
+        } else {
+            my_debug_printf("\r\n[DEADLOCK] task head is NULL!\r\n");
+        }
         LV_LOG_ERROR("SW dispatch: no available task, head=%p", layer->draw_task_head);
         LV_PROFILER_DRAW_END;
         return LV_DRAW_UNIT_IDLE;  /*Couldn't start rendering*/
@@ -332,7 +341,15 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
     draw_sw_unit->task_act = t;
 
+    /* UART探针：在execute_drawing之前 */
+    extern void my_debug_printf(const char * fmt, ...);
+    my_debug_printf("\r\n[SW_DRAW] START task type=%d\r\n", (int)t->type);
+
     execute_drawing(t);
+
+    /* UART探针：在execute_drawing之后 */
+    my_debug_printf("\r\n[SW_DRAW] END task type=%d\r\n", (int)t->type);
+
     draw_sw_unit->task_act->state = LV_DRAW_TASK_STATE_FINISHED;
     draw_sw_unit->task_act = NULL;
     LV_LOG_ERROR("SW dispatch: task finished");

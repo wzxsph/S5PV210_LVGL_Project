@@ -1402,6 +1402,16 @@ static void draw_buf_flush(lv_display_t * disp)
     /*Flush the rendered content to the display*/
     lv_layer_t * layer = disp->layer_head;
 
+    /* 探针：检查任务链表状态 */
+    extern void my_debug_printf(const char * fmt, ...);
+    lv_draw_task_t * tt = layer->draw_task_head;
+    if(tt) {
+        my_debug_printf("\r\n[DRAW_FLUSH] task head type=%d state=%d\r\n",
+                       (int)tt->type, (int)tt->state);
+    } else {
+        my_debug_printf("\r\n[DRAW_FLUSH] task head is NULL, no tasks\r\n");
+    }
+
     while(layer->draw_task_head) {
         lv_draw_dispatch_wait_for_request();
         lv_draw_dispatch();

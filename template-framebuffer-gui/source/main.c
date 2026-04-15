@@ -32,12 +32,29 @@ static void debug_printf(const char * fmt, ...)
 	}
 }
 
+/* 调试探针函数（供 LVGL 内部调用） */
+void my_debug_printf(const char * fmt, ...)
+{
+	va_list ap;
+	char buf[256];
+	int len;
+
+	va_start(ap, fmt);
+	len = vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	if (len > 0) {
+		s5pv210_serial_write_string(DEBUG_UART_CH, buf);
+	}
+}
+
 /* 简单的栈深度测试 - 递归调用 */
 void test_stack_recursion(int depth)
 {
 	volatile char buf[64];  /* 用volatile防止优化 */
 	buf[0] = depth & 0xFF;
 	buf[63] = (depth >> 8) & 0xFF;
+	(void)buf;  /* 防止未使用警告 */
 
 	if (depth < 50) {
 		test_stack_recursion(depth + 1);
@@ -56,10 +73,9 @@ void my_data_abort_handler(unsigned int lr)
 
 	/* 打印 LR 值，真正的崩溃地址是 LR - 8 */
 	char msg[64];
-	int len;
-	len = snprintf(msg, sizeof(msg), "LR (return addr): 0x%08X\r\n", (unsigned int)lr);
+	(void)snprintf(msg, sizeof(msg), "LR (return addr): 0x%08X\r\n", (unsigned int)lr);
 	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
-	len = snprintf(msg, sizeof(msg), "Real PC (LR-8): 0x%08X\r\n", (unsigned int)(lr - 8));
+	(void)snprintf(msg, sizeof(msg), "Real PC (LR-8): 0x%08X\r\n", (unsigned int)(lr - 8));
 	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
 
 	s5pv210_serial_write_string(DEBUG_UART_CH, "======================\r\n");
@@ -80,10 +96,9 @@ void my_undef_handler(unsigned int lr)
 
 	/* 打印 LR 值，真正的崩溃地址是 LR - 4 */
 	char msg[64];
-	int len;
-	len = snprintf(msg, sizeof(msg), "LR (return addr): 0x%08X\r\n", (unsigned int)lr);
+	(void)snprintf(msg, sizeof(msg), "LR (return addr): 0x%08X\r\n", (unsigned int)lr);
 	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
-	len = snprintf(msg, sizeof(msg), "Real PC (LR-4): 0x%08X\r\n", (unsigned int)(lr - 4));
+	(void)snprintf(msg, sizeof(msg), "Real PC (LR-4): 0x%08X\r\n", (unsigned int)(lr - 4));
 	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
 
 	s5pv210_serial_write_string(DEBUG_UART_CH, " Likely caused by NEON/VFP instruction without FPU enabled\r\n");

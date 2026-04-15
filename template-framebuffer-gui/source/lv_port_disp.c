@@ -13,9 +13,9 @@ extern uint32_t get_system_time_ms(void);
 #define MY_DISP_HOR_RES  1024
 #define MY_DISP_VER_RES  600
 
-/* 渲染缓冲区：分配 48 行的部分缓冲
+/* 渲染缓冲区：全屏缓冲
  * 64 字节对齐是 LVGL v9 SW 渲染器的强制要求 */
-static uint8_t buf_1[MY_DISP_HOR_RES * 48 * 4] __attribute__((aligned(64)));
+static uint8_t buf_1[MY_DISP_HOR_RES * MY_DISP_VER_RES * 4] __attribute__((aligned(64)));
 
 /* 调试统计 */
 uint32_t flush_count = 0;
@@ -136,9 +136,9 @@ void lv_port_disp_init(void)
 	/* 2. 设置颜色格式为 XRGB8888（与 LCD 32bpp 一致） */
 	lv_display_set_color_format(disp, LV_COLOR_FORMAT_XRGB8888);
 
-	/* 3. 设置渲染缓冲区（单缓冲 + 部分渲染模式） */
+	/* 3. 设置渲染缓冲区（单缓冲 + 全屏渲染模式） */
 	lv_display_set_buffers(disp, buf_1, NULL, sizeof(buf_1),
-	                       LV_DISPLAY_RENDER_MODE_PARTIAL);
+	                       LV_DISPLAY_RENDER_MODE_FULL);
 	disp_debug("[DISP_INIT] Buffers configured\r\n");
 
 	/* 4. 注册刷屏回调函数 */
