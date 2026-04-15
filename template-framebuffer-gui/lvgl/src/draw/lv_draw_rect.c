@@ -13,7 +13,6 @@
 #include "../misc/lv_text_private.h"
 #include "../core/lv_obj_event.h"
 #include "../stdlib/lv_string.h"
-#include <s5pv210-serial-stdio.h>
 
 /*********************
  *      DEFINES
@@ -41,39 +40,22 @@
 
 void LV_ATTRIBUTE_FAST_MEM lv_draw_rect_dsc_init(lv_draw_rect_dsc_t * dsc)
 {
-    serial_printf(2, "[DRAW] rect_dsc_init: E1\r\n");
     lv_memzero(dsc, sizeof(lv_draw_rect_dsc_t));
-    serial_printf(2, "[DRAW] rect_dsc_init: E2\r\n");
     dsc->bg_color = lv_color_white();
-    serial_printf(2, "[DRAW] rect_dsc_init: E3\r\n");
     dsc->bg_grad.stops[0].color = lv_color_white();
-    serial_printf(2, "[DRAW] rect_dsc_init: E4\r\n");
     dsc->bg_grad.stops[1].color = lv_color_black();
-    serial_printf(2, "[DRAW] rect_dsc_init: E5\r\n");
     dsc->bg_grad.stops[1].frac = 0xFF;
-    serial_printf(2, "[DRAW] rect_dsc_init: E6\r\n");
     dsc->bg_grad.stops_count = 2;
-    serial_printf(2, "[DRAW] rect_dsc_init: E7\r\n");
     dsc->border_color = lv_color_black();
-    serial_printf(2, "[DRAW] rect_dsc_init: E8\r\n");
     dsc->shadow_color = lv_color_black();
-    serial_printf(2, "[DRAW] rect_dsc_init: E9\r\n");
     dsc->bg_image_symbol_font = LV_FONT_DEFAULT;
-    serial_printf(2, "[DRAW] rect_dsc_init: E10\r\n");
     dsc->bg_opa = LV_OPA_COVER;
-    serial_printf(2, "[DRAW] rect_dsc_init: E11\r\n");
     dsc->bg_image_opa = LV_OPA_COVER;
-    serial_printf(2, "[DRAW] rect_dsc_init: E12\r\n");
     dsc->outline_opa = LV_OPA_COVER;
-    serial_printf(2, "[DRAW] rect_dsc_init: E13\r\n");
     dsc->border_opa = LV_OPA_COVER;
-    serial_printf(2, "[DRAW] rect_dsc_init: E14\r\n");
     dsc->shadow_opa = LV_OPA_COVER;
-    serial_printf(2, "[DRAW] rect_dsc_init: E15\r\n");
     dsc->border_side = LV_BORDER_SIDE_FULL;
-    serial_printf(2, "[DRAW] rect_dsc_init: E16\r\n");
     dsc->base.dsc_size = sizeof(lv_draw_rect_dsc_t);
-    serial_printf(2, "[DRAW] rect_dsc_init: E17 ALL DONE\r\n");
 }
 
 void lv_draw_fill_dsc_init(lv_draw_fill_dsc_t * dsc)
@@ -174,7 +156,6 @@ void lv_draw_box_shadow(lv_layer_t * layer, const lv_draw_box_shadow_dsc_t * dsc
 
 void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
 {
-    serial_printf(2, "[DRAW] lv_draw_rect E0\r\n");
     LV_PROFILER_DRAW_BEGIN;
 
     bool has_shadow;
@@ -183,7 +164,6 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
     bool has_outline;
     bool has_bg_img;
 
-    serial_printf(2, "[DRAW] lv_draw_rect E1 shadow=%d\r\n", dsc->shadow_width);
     if(dsc->shadow_width == 0 ||
        dsc->shadow_opa <= LV_OPA_MIN ||
        (dsc->shadow_width == 1 && dsc->shadow_spread <= 0 &&
@@ -194,20 +174,15 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
         has_shadow = true;
     }
 
-    serial_printf(2, "[DRAW] lv_draw_rect E2 bg=%d\r\n", dsc->bg_opa);
     has_fill = (dsc->bg_opa > LV_OPA_MIN);
 
-    serial_printf(2, "[DRAW] lv_draw_rect E3 img=%d\r\n", dsc->bg_image_opa);
     has_bg_img = (dsc->bg_image_opa > LV_OPA_MIN && dsc->bg_image_src != NULL);
 
-    serial_printf(2, "[DRAW] lv_draw_rect E4 border=%d\r\n", dsc->border_width);
     has_border = (dsc->border_opa > LV_OPA_MIN && dsc->border_width > 0 &&
                   dsc->border_post == false && dsc->border_side != LV_BORDER_SIDE_NONE);
 
-    serial_printf(2, "[DRAW] lv_draw_rect E5 outline=%d\r\n", dsc->outline_width);
     has_outline = (dsc->outline_opa > LV_OPA_MIN && dsc->outline_width > 0);
 
-    serial_printf(2, "[DRAW] lv_draw_rect E6 drop=%d\r\n", dsc->base.drop_shadow_opa);
     bool bg_cover = true;
     if(dsc->bg_opa < LV_OPA_COVER) bg_cover = false;
     else if(dsc->bg_grad.dir != LV_GRAD_DIR_NONE) {
@@ -233,9 +208,7 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
     lv_draw_task_t * t;
 
     if(has_shadow) {
-        serial_printf(2, "[DRAW] lv_draw_rect E7 shadow_task\r\n");
         t = lv_draw_add_task(layer, coords, LV_DRAW_TASK_TYPE_BOX_SHADOW);
-        lv_draw_box_shadow_dsc_t * shadow_dsc = t->draw_dsc;
         lv_draw_box_shadow_dsc_t * shadow_dsc = t->draw_dsc;
 
         lv_area_increase(&t->_real_area, dsc->shadow_spread, dsc->shadow_spread);

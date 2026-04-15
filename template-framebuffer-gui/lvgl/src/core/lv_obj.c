@@ -27,7 +27,6 @@
 #include "../tick/lv_tick.h"
 #include "../stdlib/lv_string.h"
 #include "lv_obj_draw_private.h"
-#include <s5pv210-serial-stdio.h>
 
 /*********************
  *      DEFINES
@@ -749,7 +748,6 @@ static void lv_obj_draw(lv_event_t * e)
         info->res = LV_COVER_RES_COVER;
     }
     else if(code == LV_EVENT_DRAW_MAIN) {
-        serial_printf(2, "[DRAW] LV_EVENT_DRAW_MAIN obj=%p\r\n", obj);
         lv_layer_t * layer = lv_event_get_layer(e);
 
         lv_draw_rect_dsc_t draw_dsc;
@@ -761,7 +759,6 @@ static void lv_obj_draw(lv_event_t * e)
         lv_area_t coords;
         lv_area_copy(&coords, &obj->coords);
         lv_area_increase(&coords, w, h);
-        serial_printf(2, "[DRAW] coords=(%d,%d,%d,%d)\r\n", coords.x1, coords.y1, coords.x2, coords.y2);
 
         bool backdrop_blur = lv_obj_get_style_blur_backdrop(obj, LV_PART_MAIN);
         if(backdrop_blur) {
@@ -778,9 +775,7 @@ static void lv_obj_draw(lv_event_t * e)
             draw_dsc.border_post = 1;
         }
 
-        serial_printf(2, "[DRAW] calling lv_draw_rect\r\n");
         lv_draw_rect(layer, &draw_dsc, &coords);
-        serial_printf(2, "[DRAW] lv_draw_rect returned\r\n");
     }
     else if(code == LV_EVENT_DRAW_MAIN_END) {
         /*Draw the non backdrop blur when the main content is rendered the the children are not yet */
