@@ -9,13 +9,28 @@
 /* 前向声明 */
 extern uint32_t get_system_time_ms(void);
 
-/* LCD 分辨率 - 与 s5pv210-fb.c 中的 vs070cxn_lcd 一致 */
-#define MY_DISP_HOR_RES  1024
-#define MY_DISP_VER_RES  600
+/* LCD 物理分辨率 - 与 s5pv210-fb.c 中的 vs070cxn_lcd 一致 */
+#define PANEL_HOR_RES  1024
+#define PANEL_VER_RES  600
 
+/*
+ * 调试开关：
+ * 1 = 使用 32x32 FULL 快速验证（区分真实死锁 vs 全屏渲染过慢）
+ * 0 = 使用面板全分辨率 FULL（原始配置）
+ */
+#define LVGL_FAST_PROBE_MODE 1
+
+#if LVGL_FAST_PROBE_MODE
+#define LVGL_HOR_RES  32
+#define LVGL_VER_RES  32
+static uint8_t buf_1[LVGL_HOR_RES * LVGL_VER_RES * 4] __attribute__((aligned(64)));
+#else
+#define LVGL_HOR_RES  PANEL_HOR_RES
+#define LVGL_VER_RES  PANEL_VER_RES
 /* 渲染缓冲区：全屏缓冲
  * 64 字节对齐是 LVGL v9 SW 渲染器的强制要求 */
-static uint8_t buf_1[MY_DISP_HOR_RES * MY_DISP_VER_RES * 4] __attribute__((aligned(64)));
+static uint8_t buf_1[LVGL_HOR_RES * LVGL_VER_RES * 4] __attribute__((aligned(64)));
+#endif
 
 /* 调试统计 */
 uint32_t flush_count = 0;
@@ -76,7 +91,7 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 	int32_t h = area->y2 - area->y1 + 1;
 	uint32_t * dst = fb_base + area->y1 * MY_DISP_HOR_RES + area->x1;
 	uint32_t * src = (uint32_t *)px_map;
-	uint32_t dst_stride = MY_DISP_HOR_RES;
+	uint32_t dst_stride = PANEL_HOR_RES;
 	uint32_t src_stride = w;
 
 	disp_debug("[FLUSH]   w=%d h=%d\r\n", w, h);
@@ -118,12 +133,17 @@ void lv_port_disp_init(void)
 	lv_display_t * disp;
 
 	disp_debug("\r\n[DISP_INIT] ======== Display Driver Initialization =======\r\n");
-	disp_debug("[DISP_INIT] LCD Resolution: %dx%d\r\n", MY_DISP_HOR_RES, MY_DISP_VER_RES);
+	disp_debug("[DISP_INIT] Panel Resolution: %dx%d\r\n", PANEL_HOR_RES, PANEL_VER_RES);
+	disp_debug("[DISP_INIT] LVGL Resolution: %dx%d\r\n", LVGL_HOR_RES, LVGL_VER_RES);
 	disp_debug("[DISP_INIT] Buffer size: %d bytes\r\n", (unsigned int)sizeof(buf_1));
-	disp_debug("[DISP_INIT] Render mode: PARTIAL (48 lines)\r\n");
+#if LVGL_FAST_PROBE_MODE
+	disp_debug("[DISP_INIT] Render mode: FULL (32x32 quick probe)\r\n");
+#else
+	disp_debug("[DISP_INIT] Render mode: FULL (single full-screen buffer)\r\n");
+#endif
 
 	/* 1. 创建显示设备对象 */
-	disp = lv_display_create(MY_DISP_HOR_RES, MY_DISP_VER_RES);
+	disp = lv_display_create(LVGL_HOR_RES, LVGL_VER_RES);
 	if (!disp) {
 		disp_debug("[DISP_INIT] FATAL: lv_display_create() returned NULL!\r\n");
 		while(1);

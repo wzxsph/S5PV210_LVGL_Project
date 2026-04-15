@@ -417,8 +417,11 @@ void lv_display_refr_timer(lv_timer_t * tmr)
     }
 
     lv_refr_join_area();
+    LV_LOG_USER("PROBE_TMR: after lv_refr_join_area inv_p=%d", (int)disp_refr->inv_p);
     refr_sync_areas();
+    LV_LOG_USER("PROBE_TMR: after refr_sync_areas inv_p=%d", (int)disp_refr->inv_p);
     refr_invalid_areas();
+    LV_LOG_USER("PROBE_TMR: after refr_invalid_areas inv_p=%d", (int)disp_refr->inv_p);
 
     if(disp_refr->inv_p == 0) goto refr_finish;
     /*In double buffered direct mode or if sync callback is set, save the updated areas.
@@ -667,15 +670,24 @@ static void refr_sync_areas(void)
     const bool auto_sync = disp_refr->render_mode == LV_DISPLAY_RENDER_MODE_DIRECT &&
                            lv_display_is_double_buffered(disp_refr);
     const bool user_sync = disp_refr->sync_cb != NULL;
-    if(!auto_sync && !user_sync) return;
+    LV_LOG_USER("PROBE_SYNC: enter auto_sync=%d user_sync=%d inv_p=%d", (int)auto_sync, (int)user_sync, (int)disp_refr->inv_p);
+    if(!auto_sync && !user_sync) {
+        LV_LOG_USER("PROBE_SYNC: skipped (no auto_sync and no user_sync)");
+        return;
+    }
 
     /*Do not sync if no sync areas*/
-    if(lv_ll_is_empty(&disp_refr->sync_areas)) return;
+    if(lv_ll_is_empty(&disp_refr->sync_areas)) {
+        LV_LOG_USER("PROBE_SYNC: skipped (sync_areas empty)");
+        return;
+    }
 
     LV_PROFILER_REFR_BEGIN;
     /*With double buffered direct mode synchronize the rendered areas to the other buffer*/
     /*We need to wait for ready here to not mess up the active screen*/
+    LV_LOG_USER("PROBE_SYNC: before wait_for_flushing");
     wait_for_flushing(disp_refr);
+    LV_LOG_USER("PROBE_SYNC: after wait_for_flushing");
 
     /*Iterate through invalidated areas to see if sync area should be copied*/
     uint16_t i;
@@ -850,7 +862,13 @@ static void refr_invalid_areas(void)
                 disp_refr->render_mode == LV_DISPLAY_RENDER_MODE_DIRECT) {
             disp_refr->last_part = 1;
             refr_area(&disp_refr->inv_areas[i], 0);
+            LV_LOG_USER("PROBE_REFR: before draw_buf_flush, i=%d/%d head=%p inv=(%d,%d)-(%d,%d)",
+                        (int)i, (int)disp_refr->inv_p,
+                        disp_refr->layer_head ? disp_refr->layer_head->draw_task_head : NULL,
+                        (int)disp_refr->inv_areas[i].x1, (int)disp_refr->inv_areas[i].y1,
+                        (int)disp_refr->inv_areas[i].x2, (int)disp_refr->inv_areas[i].y2);
             draw_buf_flush(disp_refr);
+            LV_LOG_USER("PROBE_REFR: after draw_buf_flush, flushing=%d", disp_refr->flushing);
         }
     }
 
@@ -1057,7 +1075,9 @@ static void refr_configured_layer(lv_layer_t * layer)
     /* In single buffered mode wait here until the buffer is freed.
      * Else we would draw into the buffer while it's still being transferred to the display*/
     if(!lv_display_is_double_buffered(disp_refr)) {
+        LV_LOG_USER("PROBE_LAYER: single-buffer path before wait_for_flushing");
         wait_for_flushing(disp_refr);
+        LV_LOG_USER("PROBE_LAYER: single-buffer path after wait_for_flushing");
     }
     /*If the screen is transparent initialize it when the flushing is ready*/
     if(lv_color_format_has_alpha(disp_refr->color_format)) {
@@ -1070,10 +1090,12 @@ static void refr_configured_layer(lv_layer_t * layer)
     lv_obj_t * top_prev_scr = NULL;
 
     /*Get the most top object which is not covered by others*/
+    LV_LOG_USER("PROBE_LAYER: before lv_refr_get_top_obj");
     top_act_scr = lv_refr_get_top_obj(&layer->_clip_area, lv_display_get_screen_active(disp_refr));
     if(disp_refr->prev_scr) {
         top_prev_scr = lv_refr_get_top_obj(&layer->_clip_area, disp_refr->prev_scr);
     }
+    LV_LOG_USER("PROBE_LAYER: after lv_refr_get_top_obj top_act=%p top_prev=%p", top_act_scr, top_prev_scr);
 
     /*Draw a bottom layer background if there is no top object*/
     if(top_act_scr == NULL && top_prev_scr == NULL) {
@@ -1402,30 +1424,38 @@ static void draw_buf_flush(lv_display_t * disp)
     /*Flush the rendered content to the display*/
     lv_layer_t * layer = disp->layer_head;
 
+    LV_LOG_USER("PROBE_FLUSH: enter draw_buf_flush, head=%p, double_buf=%d, flush_wait_cb=%p, flushing=%d",
+                layer ? layer->draw_task_head : NULL,
+                (int)lv_display_is_double_buffered(disp),
+                (void *)disp->flush_wait_cb,
+                (int)disp->flushing);
+
     /* 探针：检查任务链表状态 */
-    extern void my_debug_printf(const char * fmt, ...);
     lv_draw_task_t * tt = layer->draw_task_head;
     if(tt) {
-        my_debug_printf("\r\n[DRAW_FLUSH] task head type=%d state=%d\r\n",
-                       (int)tt->type, (int)tt->state);
+        LV_LOG_USER("PROBE_FLUSH: task head type=%d state=%d", (int)tt->type, (int)tt->state);
     } else {
-        my_debug_printf("\r\n[DRAW_FLUSH] task head is NULL, no tasks\r\n");
+        LV_LOG_USER("PROBE_FLUSH: task head is NULL");
     }
 
     while(layer->draw_task_head) {
+        LV_LOG_USER("PROBE_FLUSH: dispatch loop head=%p", layer->draw_task_head);
         lv_draw_dispatch_wait_for_request();
         lv_draw_dispatch();
     }
+    LV_LOG_USER("PROBE_FLUSH: dispatch loop completed, head=%p", layer->draw_task_head);
 
     /* In double buffered mode wait until the other buffer is freed
      * and driver is ready to receive the new buffer.
      * If we need to wait here it means that the content of one buffer is being sent to display
      * and other buffer already contains the new rendered image. */
     if(lv_display_is_double_buffered(disp)) {
+        LV_LOG_USER("PROBE_FLUSH: about to wait_for_flushing (double buffered)");
         wait_for_flushing(disp_refr);
         /* DEBUG: Add a dummy volatile read to prevent compiler from optimizing away */
         volatile int x = disp->flushing;
         (void)x;
+        LV_LOG_USER("PROBE_FLUSH: returned from wait_for_flushing, flushing=%d", (int)disp->flushing);
     }
 
     disp->flushing = 1;
@@ -1484,6 +1514,8 @@ static void wait_for_flushing(lv_display_t * disp)
 {
     LV_PROFILER_REFR_BEGIN;
     LV_LOG_TRACE("begin");
+    LV_LOG_USER("PROBE_WAIT: enter wait_for_flushing, flush_wait_cb=%p, flushing=%d",
+                (void *)disp->flush_wait_cb, (int)disp->flushing);
 
     lv_display_send_event(disp, LV_EVENT_FLUSH_WAIT_START, NULL);
 

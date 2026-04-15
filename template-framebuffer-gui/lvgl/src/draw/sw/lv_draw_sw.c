@@ -315,24 +315,18 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
 
     lv_draw_task_t * t = NULL;
 
-    /* UART探针：在get_available_task之前 */
-    extern void my_debug_printf(const char * fmt, ...);
-    my_debug_printf("\r\n[SW_DRAW] calling get_available_task\r\n");
+    LV_LOG_USER("PROBE_SW_DISPATCH: calling lv_draw_get_available_task, head=%p", layer->draw_task_head);
 
     t = lv_draw_get_available_task(layer, NULL, DRAW_UNIT_ID_SW);
 
-    /* UART探针：在get_available_task之后 */
-    my_debug_printf("\r\n[SW_DRAW] get_available_task returned t=%p\r\n", t);
+    LV_LOG_USER("PROBE_SW_DISPATCH: lv_draw_get_available_task returned t=%p", t);
 
     if(t == NULL) {
-        /* 探针：打印任务状态 */
-        extern void my_debug_printf(const char * fmt, ...);
         lv_draw_task_t * tt = layer->draw_task_head;
         if(tt) {
-            my_debug_printf("\r\n[DEADLOCK] task head type=%d state=%d\r\n",
-                           (int)tt->type, (int)tt->state);
+            LV_LOG_USER("PROBE_SW_DISPATCH: head type=%d state=%d", (int)tt->type, (int)tt->state);
         } else {
-            my_debug_printf("\r\n[DEADLOCK] task head is NULL!\r\n");
+            LV_LOG_USER("PROBE_SW_DISPATCH: head is NULL");
         }
         LV_LOG_ERROR("SW dispatch: no available task, head=%p", layer->draw_task_head);
         LV_PROFILER_DRAW_END;
@@ -341,9 +335,7 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
 
     void * buf = lv_draw_layer_alloc_buf(layer);
 
-    /* UART探针：在alloc_buf之后 */
-    extern void my_debug_printf(const char * fmt, ...);
-    my_debug_printf("\r\n[SW_DRAW] alloc_buf done, buf=0x%08X\r\n", (unsigned int)buf);
+    LV_LOG_USER("PROBE_SW_DISPATCH: lv_draw_layer_alloc_buf returned buf=%p", buf);
 
     if(buf == NULL) {
         LV_LOG_ERROR("SW dispatch: alloc_buf returned NULL!");
@@ -355,14 +347,11 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
     draw_sw_unit->task_act = t;
 
-    /* UART探针：在execute_drawing之前 */
-    extern void my_debug_printf(const char * fmt, ...);
-    my_debug_printf("\r\n[SW_DRAW] START task type=%d\r\n", (int)t->type);
+    LV_LOG_USER("PROBE_SW_DISPATCH: execute_drawing START type=%d", (int)t->type);
 
     execute_drawing(t);
 
-    /* UART探针：在execute_drawing之后 */
-    my_debug_printf("\r\n[SW_DRAW] END task type=%d\r\n", (int)t->type);
+    LV_LOG_USER("PROBE_SW_DISPATCH: execute_drawing END type=%d", (int)t->type);
 
     draw_sw_unit->task_act->state = LV_DRAW_TASK_STATE_FINISHED;
     draw_sw_unit->task_act = NULL;
