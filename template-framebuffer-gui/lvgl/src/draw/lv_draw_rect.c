@@ -174,70 +174,40 @@ void lv_draw_box_shadow(lv_layer_t * layer, const lv_draw_box_shadow_dsc_t * dsc
 
 void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
 {
-    serial_printf(2, "[DRAW] lv_draw_rect: called\r\n");
-    serial_printf(2, "[DRAW] lv_draw_rect: A\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect E0\r\n");
     LV_PROFILER_DRAW_BEGIN;
-    serial_printf(2, "[DRAW] lv_draw_rect: B after profiler\r\n");
 
     bool has_shadow;
     bool has_fill;
     bool has_border;
     bool has_outline;
     bool has_bg_img;
-    serial_printf(2, "[DRAW] lv_draw_rect: C after bool decl\r\n");
 
-    serial_printf(2, "[DRAW] lv_draw_rect: D before shadow check\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect E1 shadow=%d\r\n", dsc->shadow_width);
     if(dsc->shadow_width == 0 ||
        dsc->shadow_opa <= LV_OPA_MIN ||
        (dsc->shadow_width == 1 && dsc->shadow_spread <= 0 &&
         dsc->shadow_offset_x == 0 && dsc->shadow_offset_y == 0)) {
         has_shadow = false;
-        serial_printf(2, "[DRAW] lv_draw_rect: D1 has_shadow=false\r\n");
     }
     else {
         has_shadow = true;
-        serial_printf(2, "[DRAW] lv_draw_rect: D2 has_shadow=true\r\n");
-    }
-    serial_printf(2, "[DRAW] lv_draw_rect: E after shadow check\r\n");
-
-    serial_printf(2, "[DRAW] lv_draw_rect: E0 checking bg_opa=%d LV_OPA_MIN=%d\r\n", dsc->bg_opa, LV_OPA_MIN);
-    if(dsc->bg_opa <= LV_OPA_MIN) {
-        has_fill = false;
-        serial_printf(2, "[DRAW] lv_draw_rect: E1 has_fill=false\r\n");
-    }
-    else {
-        has_fill = true;
-        serial_printf(2, "[DRAW] lv_draw_rect: E1 has_fill=true\r\n");
     }
 
-    serial_printf(2, "[DRAW] lv_draw_rect: E2 checking bg_image\r\n");
-    serial_printf(2, "[DRAW] lv_draw_rect: E2 bg_image_opa=%d src=%p\r\n", dsc->bg_image_opa, dsc->bg_image_src);
-    if(dsc->bg_image_opa <= LV_OPA_MIN || dsc->bg_image_src == NULL) {
-        has_bg_img = false;
-        serial_printf(2, "[DRAW] lv_draw_rect: E3 has_bg_img=false\r\n");
-    }
-    else {
-        has_bg_img = true;
-        serial_printf(2, "[DRAW] lv_draw_rect: E3 has_bg_img=true\r\n");
-    }
-    serial_printf(2, "[DRAW] lv_draw_rect: E4 checking border\r\n");
-    serial_printf(2, "[DRAW] lv_draw_rect: E4 border_opa=%d width=%d post=%d side=%d\r\n",
-                  dsc->border_opa, dsc->border_width, dsc->border_post, dsc->border_side);
-    if(dsc->border_opa <= LV_OPA_MIN
-       || dsc->border_width == 0
-       || dsc->border_post == true
-       || dsc->border_side == LV_BORDER_SIDE_NONE) {
-        has_border = false;
-        serial_printf(2, "[DRAW] lv_draw_rect: E5 has_border=false\r\n");
-    }
-    else {
-        has_border = true;
-        serial_printf(2, "[DRAW] lv_draw_rect: E5 has_border=true\r\n");
-    }
-    serial_printf(2, "[DRAW] lv_draw_rect: E6 checking outline\r\n");
-    if(dsc->outline_opa <= LV_OPA_MIN || dsc->outline_width == 0) has_outline = false;
-    else has_outline = true;
+    serial_printf(2, "[DRAW] lv_draw_rect E2 bg=%d\r\n", dsc->bg_opa);
+    has_fill = (dsc->bg_opa > LV_OPA_MIN);
 
+    serial_printf(2, "[DRAW] lv_draw_rect E3 img=%d\r\n", dsc->bg_image_opa);
+    has_bg_img = (dsc->bg_image_opa > LV_OPA_MIN && dsc->bg_image_src != NULL);
+
+    serial_printf(2, "[DRAW] lv_draw_rect E4 border=%d\r\n", dsc->border_width);
+    has_border = (dsc->border_opa > LV_OPA_MIN && dsc->border_width > 0 &&
+                  dsc->border_post == false && dsc->border_side != LV_BORDER_SIDE_NONE);
+
+    serial_printf(2, "[DRAW] lv_draw_rect E5 outline=%d\r\n", dsc->outline_width);
+    has_outline = (dsc->outline_opa > LV_OPA_MIN && dsc->outline_width > 0);
+
+    serial_printf(2, "[DRAW] lv_draw_rect E6 drop=%d\r\n", dsc->base.drop_shadow_opa);
     bool bg_cover = true;
     if(dsc->bg_opa < LV_OPA_COVER) bg_cover = false;
     else if(dsc->bg_grad.dir != LV_GRAD_DIR_NONE) {
@@ -254,7 +224,7 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
         lv_layer_t * ds_layer = lv_draw_layer_create_drop_shadow(layer, &dsc->base, coords);
         LV_ASSERT_NULL(ds_layer);
         lv_draw_rect_dsc_t ds_dsc = *dsc;
-        ds_dsc.base.drop_shadow_opa = 0; /*Disable drop shadow so rendering below will render plain shadow*/
+        ds_dsc.base.drop_shadow_opa = 0;
         ds_dsc.shadow_opa = 0;
         lv_draw_rect(ds_layer, &ds_dsc, coords);
         lv_draw_layer_finish_drop_shadow(ds_layer, &dsc->base);
@@ -262,12 +232,10 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
 
     lv_draw_task_t * t;
 
-    /*Shadow*/
     if(has_shadow) {
-        /*Check whether the shadow is visible*/
-        serial_printf(2, "[DRAW] lv_draw_rect: adding shadow task\r\n");
+        serial_printf(2, "[DRAW] lv_draw_rect E7 shadow_task\r\n");
         t = lv_draw_add_task(layer, coords, LV_DRAW_TASK_TYPE_BOX_SHADOW);
-        serial_printf(2, "[DRAW] lv_draw_rect: shadow task added\r\n");
+        lv_draw_box_shadow_dsc_t * shadow_dsc = t->draw_dsc;
         lv_draw_box_shadow_dsc_t * shadow_dsc = t->draw_dsc;
 
         lv_area_increase(&t->_real_area, dsc->shadow_spread, dsc->shadow_spread);
