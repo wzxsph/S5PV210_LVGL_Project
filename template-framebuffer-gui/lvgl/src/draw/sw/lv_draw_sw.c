@@ -314,7 +314,16 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     }
 
     lv_draw_task_t * t = NULL;
+
+    /* UART探针：在get_available_task之前 */
+    extern void my_debug_printf(const char * fmt, ...);
+    my_debug_printf("\r\n[SW_DRAW] calling get_available_task\r\n");
+
     t = lv_draw_get_available_task(layer, NULL, DRAW_UNIT_ID_SW);
+
+    /* UART探针：在get_available_task之后 */
+    my_debug_printf("\r\n[SW_DRAW] get_available_task returned t=%p\r\n", t);
+
     if(t == NULL) {
         /* 探针：打印任务状态 */
         extern void my_debug_printf(const char * fmt, ...);
@@ -331,6 +340,11 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     }
 
     void * buf = lv_draw_layer_alloc_buf(layer);
+
+    /* UART探针：在alloc_buf之后 */
+    extern void my_debug_printf(const char * fmt, ...);
+    my_debug_printf("\r\n[SW_DRAW] alloc_buf done, buf=0x%08X\r\n", (unsigned int)buf);
+
     if(buf == NULL) {
         LV_LOG_ERROR("SW dispatch: alloc_buf returned NULL!");
         LV_PROFILER_DRAW_END;

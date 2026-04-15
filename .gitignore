@@ -1,0 +1,14 @@
+# Workspace-level temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.tmp
+*.log
+
+# Editor/OS files
+.vscode/*.log
+.DS_Store
+Thumbs.db
+
+# Local package/archive artifacts
+template-framebuffer-gui.zip

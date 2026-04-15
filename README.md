@@ -1,82 +1,55 @@
-# S5PV210 LVGL Bare-Metal GUI
+# S5PV210 Bare-Metal LVGL Workspace
 
-Samsung S5PV210 (ARM Cortex-A8) 无操作系统 LVGL 图形库移植。
+本仓库包含三个层次：
+- 主工程：`template-framebuffer-gui/`（日常开发与烧录只关注这里）
+- 参考工程：`template-watchdog-timer/`
+- 上游 LVGL：`lvgl/`（通常不需要改）
 
-## 硬件配置
+## 推荐工作流（最简）
 
-- **SoC**: Samsung S5PV210 @ 1GHz (ARM Cortex-A8 + NEON SIMD)
-- **内存**: 512MB DDR2 @ 667MHz
-- **显示**: 1024x600 LCD, XRGB8888 (32bpp)
-- **调试**: UART2 @ 115200 baud
-
-## 快速开始
-
-### 1. 编译
+1. 编译主工程
 
 ```bash
 cd template-framebuffer-gui
 make clean && make
 ```
 
-输出: `output/template-framebuffer-gui.bin`
+产物：`template-framebuffer-gui/output/template-framebuffer-gui.bin`
 
-### 2. 配置网络 (TFTP 服务器)
-
-TFTP 服务器地址需与 S5PV210 开发板在同一网段。
-
-编辑 `tftp_server.py` 第 8 行，确认 `ROOT_DIR` 指向 output 目录：
-
-```python
-ROOT_DIR = "C:\\Users\\<你的用户名>\\Desktop\\maybe\\LVGL_baseS5PV210_20260407\\template-framebuffer-gui\\output"
-```
-
-确保 Windows PC IP 为 `192.168.1.x` 网段（脚本会自动扫描），或手动指定。
-
-### 3. 配置串口
-
-编辑 `auto_test.ps1` 第 2 行：
+2. 一键下载并启动
 
 ```powershell
-[string]$SerialPort = "COM6"  # 修改为你的串口号
+powershell -ExecutionPolicy Bypass -File auto_test.ps1 -SerialPort COM6
 ```
 
-### 4. 运行测试
+说明：根目录 `auto_test.ps1` 是统一入口，会转发到 `template-framebuffer-gui/auto_test.ps1`。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File auto_test.ps1
-```
+## 目录导航
 
-脚本流程：
-1. 启动 TFTP 服务器
-2. 连接串口
-3. 发送 `tftp 0x30000000 template-framebuffer-gui.bin`
-4. 传输完成后发送 `go 0x30000000` 启动程序
+- `template-framebuffer-gui/`: 主项目（代码、链接脚本、构建输出）
+- `template-framebuffer-gui/source/`: 启动代码、硬件驱动、图形抽象、GUI 逻辑
+- `template-framebuffer-gui/include/`: 公共头文件
+- `template-framebuffer-gui/output/`: 构建产物（.elf/.bin/.map）
+- `doc/`: 进阶脚本与补充文档
+- `README.md`: 当前总览
+- `CLAUDE.md`: 代码代理的工程说明
 
-## 目录结构
+## 脚本约定
 
-```
-template-framebuffer-gui/
-├── source/              # 应用代码
-│   ├── startup/          # 启动汇编
-│   ├── hardware/        # S5PV210 HAL
-│   ├── graphic/         # 帧缓冲 + 软件渲染
-│   ├── library/         # 标准库实现
-│   └── gui/             # LVGL 应用
-├── lvgl/                # LVGL v9 源码
-├── include/             # 公共头文件
-├── output/              # 编译输出
-├── link.ld              # 链接脚本
-└── lv_conf.h            # LVGL 配置
-```
+- 根目录脚本用于“快捷入口”：
+	- `auto_test.ps1`
+	- `tftp_server.py`
+- 实际实现以 `template-framebuffer-gui/` 下脚本为准。
 
-## 内存布局
+## 硬件参数（摘要）
 
-| 区域 | 地址 |
-|------|------|
-| SDRAM | 0x30000000 (512MB) |
-| 帧缓冲 | 0x3E000000 |
-| 栈 (SVC) | 32KB |
+- SoC: S5PV210 (ARM Cortex-A8, 1GHz)
+- RAM: 512MB DDR2
+- LCD: 1024x600, XRGB8888
+- UART: UART2, 115200
 
-## 调试输出
+## 常见问题
 
-程序启动后通过 UART2 输出调试信息，波特率 115200。
+- Python 不存在：安装 Python 并保证 `python` 在 PATH 中。
+- 串口无输出：确认 `-SerialPort` 与开发板实际串口一致。
+- TFTP 失败：确保开发板与 PC 同网段，且未被防火墙拦截 UDP 69。

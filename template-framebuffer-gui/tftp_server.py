@@ -5,7 +5,7 @@ import threading
 import sys
 
 TFTP_PORT = 69
-ROOT_DIR = "C:\\Users\\ihao8\\Desktop\\maybe\\LVGL_baseS5PV210_20260407\\template-framebuffer-gui\\output"
+ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
 
 class TFTPServer:
     def __init__(self, host=None, port=TFTP_PORT, root=ROOT_DIR):
