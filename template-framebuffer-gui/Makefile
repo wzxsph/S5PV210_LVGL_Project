@@ -2,6 +2,9 @@
 # Makefile for module.
 #
 
+# Enable parallel builds by default (use MAKEFLAGS=-jN to override)
+MAKEFLAGS += -j24
+
 CROSS		?= arm-none-eabi-
 NAME		:= template-framebuffer-gui
 

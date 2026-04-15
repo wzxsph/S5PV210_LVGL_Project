@@ -32,11 +32,47 @@ static void debug_printf(const char * fmt, ...)
 	}
 }
 
+/* 简单的栈深度测试 - 递归调用 */
+void test_stack_recursion(int depth)
+{
+	volatile char buf[64];  /* 用volatile防止优化 */
+	buf[0] = depth & 0xFF;
+	buf[63] = (depth >> 8) & 0xFF;
+
+	if (depth < 50) {
+		test_stack_recursion(depth + 1);
+	}
+}
+
+/* Data Abort 异常处理函数 - 由 start.S 调用
+ * 当发生 Data Abort 时，CPU 会跳转到此函数
+ * r0 = LR (Link Register，保存着发生异常时的返回地址)
+ * 真正的崩溃PC是 LR - 8
+ */
+void my_data_abort_handler(unsigned int lr)
+{
+	/* 使用 UART2 (DEBUG_UART_CH) 打印调试信息 */
+	s5pv210_serial_write_string(DEBUG_UART_CH, "\r\n\r\n===== DATA ABORT =====\r\n");
+
+	/* 打印 LR 值，真正的崩溃地址是 LR - 8 */
+	char msg[64];
+	int len;
+	len = snprintf(msg, sizeof(msg), "LR (return addr): 0x%08X\r\n", (unsigned int)lr);
+	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
+	len = snprintf(msg, sizeof(msg), "Real PC (LR-8): 0x%08X\r\n", (unsigned int)(lr - 8));
+	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
+
+	s5pv210_serial_write_string(DEBUG_UART_CH, "======================\r\n");
+
+	/* 死循环，保留现场供调试 */
+	while(1);
+}
+
 /* LVGL 日志回调函数 */
 static void my_log_print_cb(lv_log_level_t level, const char * buf)
 {
 	const char * level_str;
-	
+
 	switch(level) {
 		case LV_LOG_LEVEL_TRACE: level_str = "[TRACE]"; break;
 		case LV_LOG_LEVEL_INFO:  level_str = "[INFO] "; break;
@@ -45,7 +81,7 @@ static void my_log_print_cb(lv_log_level_t level, const char * buf)
 		case LV_LOG_LEVEL_USER:  level_str = "[USER] "; break;
 		default: level_str = "[LOG]  "; break;
 	}
-	
+
 	debug_printf("%s %s", level_str, buf);
 }
 
@@ -90,10 +126,57 @@ static void do_system_initial(void)
 	debug_printf("[INIT] ============================================\r\n");
 }
 
+/*-----------------------------------------------------
+ * 直接Framebuffer测试（不依赖LVGL）
+ *-----------------------------------------------------*/
+static void rgb_test_direct_framebuffer(void)
+{
+	extern struct surface_t * s5pv210_screen_surface(void);
+	extern void s5pv210_screen_swap(void);
+	extern void s5pv210_screen_flush(void);
+
+	struct surface_t * surf = s5pv210_screen_surface();
+	debug_printf("\r\n[RGB_TEST] ======== Direct Framebuffer Test =======\r\n");
+	debug_printf("[RGB_TEST] surface @ 0x%08X\r\n", (unsigned int)surf);
+	debug_printf("[RGB_TEST] pixels @ 0x%08X\r\n", (unsigned int)surf->pixels);
+
+	/* ARM Demo 风格：swap -> 写入 -> flush */
+	debug_printf("[RGB_TEST] Calling s5pv210_screen_swap()...\r\n");
+	s5pv210_screen_swap();
+
+	surf = s5pv210_screen_surface();
+	uint32_t * fb = (uint32_t *)surf->pixels;
+	debug_printf("[RGB_TEST] After swap: pixels @ 0x%08X\r\n", (unsigned int)fb);
+
+	/* 绘制 RGB 条纹 */
+	debug_printf("[RGB_TEST] Drawing RGB stripes...\r\n");
+	for (int i = 0; i < 1024 * 200; i++) fb[i] = 0xFFFF0000;  /* Red */
+	for (int i = 1024 * 200; i < 1024 * 400; i++) fb[i] = 0xFF00FF00;  /* Green */
+	for (int i = 1024 * 400; i < 1024 * 600; i++) fb[i] = 0xFF0000FF;  /* Blue */
+	debug_printf("[RGB_TEST] RGB stripes drawn to buffer\r\n");
+
+	/* 更新 FIMD 寄存器 */
+	debug_printf("[RGB_TEST] Calling s5pv210_screen_flush()...\r\n");
+	s5pv210_screen_flush();
+	debug_printf("[RGB_TEST] Flush complete\r\n");
+
+	/* 再swap一次，显示刚才绘制的缓冲区 */
+	debug_printf("[RGB_TEST] Calling s5pv210_screen_swap() to display...\r\n");
+	s5pv210_screen_swap();
+
+	debug_printf("[RGB_TEST] ======== RGB Test Complete =======\r\n");
+	debug_printf("[RGB_TEST] LCD should show RGB stripes now!\r\n");
+
+	/* 保留RGB条纹3秒让用户确认 */
+	mdelay(3000);
+	debug_printf("[RGB_TEST] Continuing to LVGL init...\r\n");
+}
+
 int main(int argc, char * argv[])
 {
 	uint32_t loop_count = 0;
 	static uint32_t last_debug_time = 0;
+	uint32_t t0, t1, result;
 
 	debug_printf("\r\n");
 	debug_printf("============================================\r\n");
@@ -106,20 +189,20 @@ int main(int argc, char * argv[])
 
 	mdelay(100);  /* 等待 LCD 稳定 */
 
+	/* ========== 直接Framebuffer测试（不依赖LVGL）========== */
+	rgb_test_direct_framebuffer();
+
+	/* ========== LVGL 初始化和测试 ========== */
+
 	/* 2. 初始化 LVGL 核心 */
-	debug_printf("[LVGL] Calling lv_init()...\r\n");
+	debug_printf("\r\n[LVGL] Calling lv_init()...\r\n");
 	lv_init();
 	debug_printf("[LVGL] lv_init() SUCCESS!\r\n");
-	
+
 	/* 注册 LVGL 日志回调 */
 	debug_printf("[LVGL] Registering log callback...\r\n");
 	lv_log_register_print_cb(my_log_print_cb);
 	debug_printf("[LVGL] Log callback registered\r\n");
-
-	/* 测试：调用 lv_timer_handler 在 display 创建之前 */
-	debug_printf("[TEST0] lv_timer_handler test BEFORE display create...\r\n");
-	lv_timer_handler();
-	debug_printf("[TEST0] lv_timer_handler returned (this is expected to work)\r\n");
 
 	/* 3. 注册 Tick 回调 */
 	debug_printf("[LVGL] Registering tick callback (jiffies->ms)...\r\n");
@@ -134,96 +217,52 @@ int main(int argc, char * argv[])
 		debug_printf("[LVGL]   Total: %zu bytes\r\n", mon.total_size);
 		debug_printf("[LVGL]   Free: %zu bytes\r\n", mon.free_size);
 		debug_printf("[LVGL]   Used: %zu bytes (%d%%)\r\n", mon.total_size - mon.free_size, mon.used_pct);
-		debug_printf("[LVGL]   Biggest free: %zu bytes\r\n", mon.free_biggest_size);
 	}
 
 	/* 4. 初始化显示接口 */
-	debug_printf("[DISP] Calling lv_port_disp_init()...\r\n");
+	debug_printf("\r\n[DISP] Calling lv_port_disp_init()...\r\n");
 	lv_port_disp_init();
 	debug_printf("[DISP] lv_port_disp_init() returned!\r\n");
 
-	/* 5. 测试1：空白屏幕 + lv_timer_handler with delays */
-	debug_printf("[TEST1] Testing lv_timer_handler on empty screen (no label)...\r\n");
-	for (int i = 0; i < 5; i++) {
-		debug_printf("[TEST1] lv_timer_handler call #%d...\r\n", i);
-		lv_timer_handler();
-		debug_printf("[TEST1] lv_timer_handler #%d returned. flush=%lu\r\n", i, (unsigned long)flush_count);
-		mdelay(20);
-	}
-	debug_printf("[TEST1] All lv_timer_handler calls done!\r\n");
-	{
-		extern struct surface_t * s5pv210_screen_surface(void);
-		struct surface_t * surf = s5pv210_screen_surface();
-		if (surf && surf->pixels) {
-			uint32_t * fb = (uint32_t *)surf->pixels;
-			for (int i = 0; i < 1024 * 200; i++) fb[i] = 0xFFFF0000;  /* Red */
-			for (int i = 1024 * 200; i < 1024 * 400; i++) fb[i] = 0xFF00FF00;  /* Green */
-			for (int i = 1024 * 400; i < 1024 * 600; i++) fb[i] = 0xFF0000FF;  /* Blue */
-			debug_printf("[TEST1] RGB stripes drawn! Check LCD.\r\n");
-		}
-	}
+	/* 5. 创建screen和label（先于lv_timer_handler调用） */
+	debug_printf("\r\n[UI] Creating screen and label...\r\n");
+	lv_obj_t * scr = lv_scr_act();
+	debug_printf("[UI] Active screen: %p\r\n", (void *)scr);
 
-	mdelay(2000);  /* 显示2秒让用户确认 */
-	debug_printf("[TEST1] RGB stripe test done. Now testing LVGL rendering...\r\n");
+	/* 不创建任何UI控件，先测试裸的lv_timer_handler */
+	debug_printf("[UI] Skipping UI creation - testing bare lv_timer_handler\r\n");
 
-	/* 6. 清屏 - 用黑色覆盖 RGB 条纹 */
-	{
-		extern struct surface_t * s5pv210_screen_surface(void);
-		struct surface_t * surf = s5pv210_screen_surface();
-		if (surf && surf->pixels) {
-			uint32_t * fb = (uint32_t *)surf->pixels;
-			for (int i = 0; i < 1024 * 600; i++) fb[i] = 0xFF000000;  /* Black */
-			debug_printf("[TEST1] Screen cleared to black.\r\n");
-		}
-	}
+	/* 强制刷新布局，排查是否是 UI 创建时的问题 */
+	debug_printf("[UI] Calling lv_obj_update_layout on empty screen...\r\n");
+	lv_obj_update_layout(scr);
+	debug_printf("[UI] lv_obj_update_layout returned\r\n");
 
-	debug_printf("[TEST1] Before mdelay(500)\r\n");
-	mdelay(500);
-	debug_printf("[TEST1] After mdelay(500), flush_count=%lu\r\n", (unsigned long)flush_count);
+	/* 6. 调用 lv_timer_handler (有了UI对象后) */
+	debug_printf("\r\n[TEST] Calling lv_timer_handler() to render UI...\r\n");
+	flush_count = 0;
+	debug_printf("[TEST] About to call lv_timer_handler()...\r\n");
 
-	/* 7. 测试2：创建一个简单的 LVGL 控件 */
-	debug_printf("[TEST2] Creating LVGL label...\r\n");
-	{
-		lv_obj_t * label = lv_label_create(lv_screen_active());
-		if (label) {
-			lv_label_set_text(label, "Hello S5PV210!");
-			lv_obj_center(label);
-			lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-			debug_printf("[TEST2] Label created at %p\r\n", label);
-		} else {
-			debug_printf("[TEST2] ERROR: Failed to create label!\r\n");
-		}
-	}
+	/* 测试栈深度 - 调用一个简单的递归函数 */
+	debug_printf("[TEST] Testing stack depth with simple recursion...\r\n");
+	extern void test_stack_recursion(int depth);
+	test_stack_recursion(0);
 
-	/* 8. 测试 lv_timer_handler */
-	debug_printf("[TEST2] Calling lv_timer_handler() after label create...\r\n");
-	uint32_t t0 = get_system_time_ms();
-	uint32_t result = lv_timer_handler();
-	uint32_t t1 = get_system_time_ms();
-	debug_printf("[TEST2] lv_timer_handler() returned! result=%lu elapsed=%lu ms flush=%lu\r\n",
+	debug_printf("[TEST] Stack test complete, calling lv_timer_handler()...\r\n");
+
+	t0 = get_system_time_ms();
+	result = lv_timer_handler();
+	t1 = get_system_time_ms();
+	debug_printf("[TEST] lv_timer_handler() returned! result=%lu elapsed=%lu ms flush=%lu\r\n",
 	             (unsigned long)result, (unsigned long)(t1 - t0), (unsigned long)flush_count);
 
-	/* 8. 进入 LVGL 主循环 */
-	debug_printf("[LOOP] Entering LVGL main loop with lv_timer_handler()...\r\n");
+	/* 7. 进入主循环 */
+	debug_printf("\r\n[LOOP] Entering main loop...\r\n");
 	debug_printf("============================================\r\n\r\n");
-
-	/* 首次调用 lv_timer_handler 的调试包装 */
-	{
-		debug_printf("[LOOP] About to call lv_timer_handler() for the FIRST time...\r\n");
-		t0 = get_system_time_ms();
-		result = lv_timer_handler();
-		t1 = get_system_time_ms();
-		debug_printf("[LOOP] FIRST lv_timer_handler() returned! result=%lu elapsed=%lu ms flush=%lu\r\n",
-		             (unsigned long)result, (unsigned long)(t1 - t0), (unsigned long)flush_count);
-	}
 
 	while(1) {
 		loop_count++;
-
-		/* 调用 LVGL 定时器处理（包含渲染） */
 		lv_timer_handler();
 
-		/* 定期调试输出 */
 		if ((get_system_time_ms() - last_debug_time) >= 3000) {
 			last_debug_time = get_system_time_ms();
 			debug_printf("[LOOP] tick=%u loops=%lu flush=%lu\r\n",

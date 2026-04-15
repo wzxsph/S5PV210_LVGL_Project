@@ -18,8 +18,6 @@ static uint8_t buf_1[MY_DISP_HOR_RES * 48 * 4];
 
 /* 调试统计 */
 uint32_t flush_count = 0;
-static uint32_t last_flush_debug = 0;
-static uint32_t debug_pixel_start = 0;  /* 用于记录首次像素写入 */
 
 /* 调试输出宏 */
 #define DISP_DEBUG_CH   2       /* UART2 */
@@ -46,11 +44,6 @@ static void disp_debug(const char * fmt, ...)
  * 像素格式为 XRGB8888（字节序：B[0] G[1] R[2] X[3]），
  * 与 LVGL 的 LV_COLOR_FORMAT_XRGB8888 完全匹配，
  * 因此可以直接 memcpy，无需逐像素转换。
- *
- * 关键修复：按照 ARM Demo 的工作流程，需要调用：
- *   screen_swap() - 切换前后缓冲区，更新 surface.pixels
- *   screen_flush() - 更新 FIMD 缓冲区地址寄存器
- * 否则 FIMD 不知道 LVGL 写入的是哪个缓冲区，导致 LCD 黑屏。
  *----------------------------------------------------*/
 static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_map)
 {
@@ -63,16 +56,12 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 
 	/* 调试：打印 flush_cb 进入点 */
 	disp_debug("\r\n[FLUSH] #%lu ENTRY\r\n", (unsigned long)flush_count);
-	disp_debug("[FLUSH]   disp=0x%08X area=(%d,%d)-(%d,%d) px_map=0x%08X\r\n",
-	           (unsigned int)disp, area->x1, area->y1, area->x2, area->y2,
+	disp_debug("[FLUSH]   area=(%d,%d)-(%d,%d) px_map=0x%08X\r\n",
+	           area->x1, area->y1, area->x2, area->y2,
 	           (unsigned int)px_map);
 
 	/* 获取 Framebuffer 首地址 */
 	surface = s5pv210_screen_surface();
-	disp_debug("[FLUSH]   surface=0x%08X pixels=0x%08X\r\n",
-	           (unsigned int)surface,
-	           surface ? (unsigned int)surface->pixels : 0);
-
 	if (!surface || !surface->pixels) {
 		disp_debug("[FLUSH]   ERROR: Invalid framebuffer!\r\n");
 		lv_display_flush_ready(disp);
@@ -80,72 +69,40 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 	}
 
 	fb_base = (uint32_t *)surface->pixels;
-	disp_debug("[FLUSH]   fb_base=0x%08X\r\n", (unsigned int)fb_base);
 
 	/* 计算刷新区域的参数 */
 	int32_t w = area->x2 - area->x1 + 1;
 	int32_t h = area->y2 - area->y1 + 1;
 	uint32_t * dst = fb_base + area->y1 * MY_DISP_HOR_RES + area->x1;
 	uint32_t * src = (uint32_t *)px_map;
-	uint32_t dst_stride = MY_DISP_HOR_RES;  /* framebuffer 行步长（像素） */
-	uint32_t src_stride = w;                 /* LVGL 渲染缓冲区行步长（像素） */
+	uint32_t dst_stride = MY_DISP_HOR_RES;
+	uint32_t src_stride = w;
 
-	disp_debug("[FLUSH]   w=%d h=%d dst=0x%08X src=0x%08X\r\n",
-	           w, h, (unsigned int)dst, (unsigned int)src);
-	disp_debug("[FLUSH]   dst_stride=%u src_stride=%u\r\n", dst_stride, src_stride);
-
-	/* 记录首次像素写入（用于判断是否有实际渲染） */
-	if (debug_pixel_start == 0 && w > 0 && h > 0) {
-		debug_pixel_start = flush_count;
-		disp_debug("[FLUSH]   >>> FIRST PIXEL WRITE at flush #%lu <<<\r\n", (unsigned long)flush_count);
-	}
-
-	/* 检查 px_map 第一个像素的颜色（用于判断是否有实际渲染内容） */
-	if (flush_count <= 3) {
-		uint32_t first_pixel = *src;
-		disp_debug("[FLUSH]   first_pixel@src=0x%08X (color=0x%08X)\r\n",
-		           first_pixel, first_pixel);
-	}
+	disp_debug("[FLUSH]   w=%d h=%d\r\n", w, h);
 
 	/* ARM Demo 风格的缓冲区切换：
-	 * 1. screen_swap() 切换 vram_front/vram_back，更新 surface.pixels
-	 * 2. memcpy 将渲染数据写入新的 back buffer
-	 * 3. screen_flush() 更新 FIMD 的缓冲区地址寄存器
-	 * 这样可以避免 FIMD 正在扫描的缓冲区被同时写入（防止撕裂）*/
-	disp_debug("[FLUSH]   Calling s5pv210_screen_swap()...\r\n");
+	 * 1. screen_swap() 切换到 back buffer
+	 * 2. memcpy 将渲染数据写入 back buffer
+	 * 3. screen_flush() 更新 FIMD 寄存器
+	 */
 	s5pv210_screen_swap();
 
-	/* 重新获取 surface->pixels（screen_swap 后已更新为新的 back buffer）*/
+	/* 重新获取 surface->pixels（现在是新的 back buffer）*/
 	surface = s5pv210_screen_surface();
 	fb_base = (uint32_t *)surface->pixels;
 	dst = fb_base + area->y1 * MY_DISP_HOR_RES + area->x1;
-	disp_debug("[FLUSH]   After swap: surface->pixels=0x%08X dst=0x%08X\r\n",
-	           (unsigned int)surface->pixels, (unsigned int)dst);
 
 	/* 行级复制：每行用 memcpy 一次性拷贝 */
-	disp_debug("[FLUSH]   Starting memcpy %d bytes x %d rows...\r\n", w * 4, h);
 	for (int32_t y = 0; y < h; y++) {
 		memcpy(dst, src, w * 4);
 		dst += dst_stride;
 		src += src_stride;
 	}
-	disp_debug("[FLUSH]   memcpy completed\r\n");
 
-	/* 验证写入的像素 */
-	if (flush_count <= 3) {
-		/* 重新计算 dst 位置（上面循环已改变 dst） */
-		dst = fb_base + area->y1 * MY_DISP_HOR_RES + area->x1;
-		uint32_t verify_pixel = *dst;
-		disp_debug("[FLUSH]   verify_pixel@dst[0]=0x%08X\r\n", verify_pixel);
-	}
-
-	/* 更新 FIMD 缓冲区地址，使 FIMD 知道从新缓冲区扫描像素显示 */
-	disp_debug("[FLUSH]   Calling s5pv210_screen_flush()...\r\n");
+	/* 更新 FIMD 缓冲区地址 */
 	s5pv210_screen_flush();
-	disp_debug("[FLUSH]   screen_flush() returned\r\n");
 
 	/* 通知 LVGL 刷新完成 */
-	disp_debug("[FLUSH]   Calling lv_display_flush_ready()...\r\n");
 	lv_display_flush_ready(disp);
 
 	t1 = get_system_time_ms();
@@ -161,72 +118,27 @@ void lv_port_disp_init(void)
 
 	disp_debug("\r\n[DISP_INIT] ======== Display Driver Initialization =======\r\n");
 	disp_debug("[DISP_INIT] LCD Resolution: %dx%d\r\n", MY_DISP_HOR_RES, MY_DISP_VER_RES);
-	disp_debug("[DISP_INIT] Color depth: 32bpp (XRGB8888)\r\n");
-	disp_debug("[DISP_INIT] Buffer size: %d bytes (%.1f KB)\r\n",
-	           sizeof(buf_1), sizeof(buf_1) / 1024.0);
+	disp_debug("[DISP_INIT] Buffer size: %d bytes\r\n", (unsigned int)sizeof(buf_1));
 	disp_debug("[DISP_INIT] Render mode: PARTIAL (48 lines)\r\n");
 
-	/* 验证 LCD 是否已初始化 */
-	{
-		struct surface_t * surf = s5pv210_screen_surface();
-		if (surf && surf->pixels) {
-			disp_debug("[DISP_INIT] LCD Framebuffer validated: 0x%08X\r\n", (unsigned int)surf->pixels);
-			disp_debug("[DISP_INIT] Surface: w=%d h=%d pitch=%d\r\n",
-			           surf->w, surf->h, surf->pitch);
-		} else {
-			disp_debug("[DISP_INIT] WARNING: LCD surface not ready yet!\r\n");
-			disp_debug("[DISP_INIT]          Will try again in flush_cb...\r\n");
-		}
-	}
-
 	/* 1. 创建显示设备对象 */
-	disp_debug("[DISP_INIT] Creating display object...\r\n");
-	disp_debug("[DISP_INIT] About to call lv_display_create(%d, %d)...\r\n", MY_DISP_HOR_RES, MY_DISP_VER_RES);
-
-	/* 检查LVGL内存状态 */
-	{
-		lv_mem_monitor_t mon;
-		lv_mem_monitor(&mon);
-		disp_debug("[DISP_INIT] Memory before lv_display_create:\r\n");
-		disp_debug("[DISP_INIT]   Total: %zu bytes\r\n", mon.total_size);
-		disp_debug("[DISP_INIT]   Free: %zu bytes\r\n", mon.free_size);
-		disp_debug("[DISP_INIT]   Used: %zu bytes (%d%%)\r\n", mon.total_size - mon.free_size, mon.used_pct);
-		disp_debug("[DISP_INIT]   Biggest free: %zu bytes\r\n", mon.free_biggest_size);
-	}
-
-	disp_debug("[DISP_INIT] Before lv_display_create()...\r\n");
 	disp = lv_display_create(MY_DISP_HOR_RES, MY_DISP_VER_RES);
-	disp_debug("[DISP_INIT] After lv_display_create()...\r\n");
-
-	disp_debug("[DISP_INIT] lv_display_create() returned: 0x%08X\r\n", (unsigned int)disp);
-
 	if (!disp) {
 		disp_debug("[DISP_INIT] FATAL: lv_display_create() returned NULL!\r\n");
-		disp_debug("[DISP_INIT] Possible causes:\r\n");
-		disp_debug("[DISP_INIT]   1. Insufficient memory (LV_MEM_SIZE too small)\r\n");
-		disp_debug("[DISP_INIT]   2. Memory allocation failure\r\n");
-		disp_debug("[DISP_INIT]   3. Internal LVGL error\r\n");
-		disp_debug("[DISP_INIT] HALTING...\r\n");
-		while(1);  /* 停止执行 */
+		while(1);
 	}
-	disp_debug("[DISP_INIT] Display object created successfully: 0x%08X\r\n", (unsigned int)disp);
+	disp_debug("[DISP_INIT] Display created\r\n");
 
 	/* 设置此 display 为默认 display */
 	lv_display_set_default(disp);
-	disp_debug("[DISP_INIT] Display set as default\r\n");
 
 	/* 2. 设置颜色格式为 XRGB8888（与 LCD 32bpp 一致） */
 	lv_display_set_color_format(disp, LV_COLOR_FORMAT_XRGB8888);
-	disp_debug("[DISP_INIT] Color format set to XRGB8888\r\n");
 
 	/* 3. 设置渲染缓冲区（单缓冲 + 部分渲染模式） */
-	disp_debug("[DISP_INIT] Setting render buffers...\r\n");
-	disp_debug("[DISP_INIT]   buf_1 size=%u bytes\r\n",
-	           (unsigned int)sizeof(buf_1));
-
 	lv_display_set_buffers(disp, buf_1, NULL, sizeof(buf_1),
 	                       LV_DISPLAY_RENDER_MODE_PARTIAL);
-	disp_debug("[DISP_INIT] Render buffers configured\r\n");
+	disp_debug("[DISP_INIT] Buffers configured\r\n");
 
 	/* 4. 注册刷屏回调函数 */
 	lv_display_set_flush_cb(disp, disp_flush);
@@ -237,7 +149,6 @@ void lv_port_disp_init(void)
 
 /*-----------------------------------------------------
  * 将 jiffies (100Hz) 换算为毫秒
- * 供 lv_tick_set_cb() 注册使用
  *----------------------------------------------------*/
 uint32_t get_system_time_ms(void)
 {
