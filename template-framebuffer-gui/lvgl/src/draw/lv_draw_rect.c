@@ -157,6 +157,7 @@ void lv_draw_box_shadow(lv_layer_t * layer, const lv_draw_box_shadow_dsc_t * dsc
 void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
 {
     LV_PROFILER_DRAW_BEGIN;
+    LV_LOG_USER("PROBE_ATOMIC: A. Entering lv_draw_rect");
 
     bool has_shadow;
     bool has_fill;
@@ -208,7 +209,9 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
     lv_draw_task_t * t;
 
     if(has_shadow) {
+        LV_LOG_USER("PROBE_ATOMIC: B. About to call lv_draw_add_task for BOX_SHADOW...");
         t = lv_draw_add_task(layer, coords, LV_DRAW_TASK_TYPE_BOX_SHADOW);
+        LV_LOG_USER("PROBE_ATOMIC: C. Task allocated successfully!");
         lv_draw_box_shadow_dsc_t * shadow_dsc = t->draw_dsc;
 
         lv_area_increase(&t->_real_area, dsc->shadow_spread, dsc->shadow_spread);

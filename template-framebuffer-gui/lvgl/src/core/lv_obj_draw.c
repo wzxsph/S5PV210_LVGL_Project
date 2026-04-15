@@ -49,10 +49,13 @@ static void drop_shadow_init(const lv_obj_t * obj, lv_part_t part, lv_draw_dsc_b
 void lv_obj_init_draw_rect_dsc(lv_obj_t * obj, lv_part_t part, lv_draw_rect_dsc_t * draw_dsc)
 {
     LV_PROFILER_DRAW_BEGIN;
+    LV_LOG_USER("PROBE_INIT: Enter lv_obj_init_draw_rect_dsc obj=%p part=%d", obj, (int)part);
     draw_dsc->base.obj = obj;
     draw_dsc->base.part = part;
 
+    LV_LOG_USER("PROBE_INIT: Calling get_layer_opa...");
     lv_opa_t opa = get_layer_opa(obj, part, &draw_dsc->base);
+    LV_LOG_USER("PROBE_INIT: get_layer_opa returned opa=%d", (int)opa);
     if(part != LV_PART_MAIN) {
         if(opa <= LV_OPA_MIN) {
             draw_dsc->bg_opa = LV_OPA_TRANSP;
@@ -65,12 +68,19 @@ void lv_obj_init_draw_rect_dsc(lv_obj_t * obj, lv_part_t part, lv_draw_rect_dsc_
         }
     }
 
+    LV_LOG_USER("PROBE_INIT: Calling lv_obj_get_style_radius...");
     draw_dsc->radius = lv_obj_get_style_radius(obj, part);
+    LV_LOG_USER("PROBE_INIT: lv_obj_get_style_radius returned radius=%d", (int)draw_dsc->radius);
 
+    LV_LOG_USER("PROBE_INIT: Checking bg_opa != LV_OPA_TRANSP...");
     if(draw_dsc->bg_opa != LV_OPA_TRANSP) {
+        LV_LOG_USER("PROBE_INIT: Calling lv_obj_get_style_bg_opa...");
         draw_dsc->bg_opa = lv_obj_get_style_bg_opa(obj, part);
+        LV_LOG_USER("PROBE_INIT: lv_obj_get_style_bg_opa returned bg_opa=%d", (int)draw_dsc->bg_opa);
         if(draw_dsc->bg_opa > LV_OPA_MIN) {
+            LV_LOG_USER("PROBE_INIT: Calling lv_obj_get_style_bg_color...");
             lv_color_t bg_color = lv_obj_get_style_bg_color_filtered(obj, part);
+            LV_LOG_USER("PROBE_INIT: lv_obj_get_style_bg_color returned");
             draw_dsc->bg_color = normal_apply_layer_recolor(obj, part, &draw_dsc->base, bg_color);
             const lv_grad_dsc_t * grad = lv_obj_get_style_bg_grad(obj, part);
             if(grad && grad->dir != LV_GRAD_DIR_NONE) {

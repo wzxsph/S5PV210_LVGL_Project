@@ -1169,6 +1169,10 @@ static void refr_obj_and_children(lv_layer_t * layer, lv_obj_t * top_obj)
     if(top_obj == NULL) return;  /*Shouldn't happen*/
 
     LV_PROFILER_REFR_BEGIN;
+
+    /* 探针 1：确认进入了哪个对象 */
+    LV_LOG_USER("PROBE_OBJ: Enter obj=%p", top_obj);
+
     /*Draw the 'younger' sibling objects because they can be on top_obj*/
     lv_obj_t * parent;
     lv_obj_t * border_p = top_obj;
@@ -1180,8 +1184,20 @@ static void refr_obj_and_children(lv_layer_t * layer, lv_obj_t * top_obj)
         layer->recolor = lv_obj_get_style_recolor_recursive(parent, LV_PART_MAIN);
     }
 
-    /*Refresh the top object and its children*/
+    /* 探针 2：抓捕主绘制事件死锁 */
+    LV_LOG_USER("PROBE_OBJ: Sending LV_EVENT_DRAW_MAIN...");
     lv_obj_refr(layer, top_obj);
+    LV_LOG_USER("PROBE_OBJ: LV_EVENT_DRAW_MAIN finished!");
+
+    /* 探针 3：抓捕子对象遍历死锁（关键！） */
+    uint32_t child_cnt = lv_obj_get_child_count(top_obj);
+    LV_LOG_USER("PROBE_OBJ: Traversing %d children...", child_cnt);
+
+    for(uint32_t i = 0; i < child_cnt; i++) {
+        LV_LOG_USER("PROBE_OBJ: Entering child %d of %d", i, child_cnt);
+        refr_obj_and_children(layer, top_obj->spec_attr->children[i]);
+    }
+    LV_LOG_USER("PROBE_OBJ: Children traversal finished!");
 
     /*Do until not reach the screen*/
     while(parent != NULL) {

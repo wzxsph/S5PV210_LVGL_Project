@@ -218,13 +218,8 @@ VPATH		:= $(X_OBJDIRS)
 
 all : dirs $(X_NAME)
 
-ifeq ($(OS),Windows_NT)
-dirs:
-	@for %%D in ($(subst /,\,$(X_OBJDIRS)) $(X_OUT)) do @if not exist "%%D" mkdir "%%D"
-else
 dirs:
 	@$(MKDIR) $(X_OBJDIRS) $(X_OUT)
-endif
 
 $(X_NAME) : $(X_OBJS)
 	@echo [LD] Linking $@.elf

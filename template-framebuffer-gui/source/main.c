@@ -216,6 +216,14 @@ static void rgb_test_direct_framebuffer(void)
 
 int main(int argc, char * argv[])
 {
+	/* 终极防线：强制清零 BSS 段，防止未初始化全局变量导致死锁 */
+	extern unsigned int __bss_start;
+	extern unsigned int __bss_end;
+	unsigned int * bss_ptr = (unsigned int *)&__bss_start;
+	while(bss_ptr < (unsigned int *)&__bss_end) {
+		*bss_ptr++ = 0;
+	}
+
 	uint32_t loop_count = 0;
 	static uint32_t last_debug_time = 0;
 	uint32_t t0, t1, result;
@@ -232,7 +240,9 @@ int main(int argc, char * argv[])
 	mdelay(100);  /* 等待 LCD 稳定 */
 
 	/* ========== 直接Framebuffer测试（不依赖LVGL）========== */
+	/* 注释掉RGB测试，避免干扰LVGL状态
 	rgb_test_direct_framebuffer();
+	*/
 
 	/* ========== LVGL 初始化和测试 ========== */
 
@@ -272,14 +282,16 @@ int main(int argc, char * argv[])
 	debug_printf("[UI] Active screen: %p\r\n", (void *)scr);
 
 	/* 创建一个完全扁平的 obj，无圆角无阴影 */
+	/* [DEBUG] 注释掉UI创建代码以测试是否是内存踩踏导致死锁
 	lv_obj_t * obj = lv_obj_create(scr);
-	lv_obj_set_size(obj, 20, 10);  /* 32x32 快速测试模式下的小尺寸 */
-	lv_obj_set_pos(obj, 2, 2);     /* 32x32 可见范围内 */
-	/* 移除所有圆角和阴影 */
+	lv_obj_set_size(obj, 20, 10);  // 32x32 快速测试模式下的小尺寸
+	lv_obj_set_pos(obj, 2, 2);     // 32x32 可见范围内
+	// 移除所有圆角和阴影
 	lv_obj_set_style_radius(obj, 0, 0);
 	lv_obj_set_style_shadow_width(obj, 0, 0);
 	lv_obj_set_style_border_width(obj, 0, 0);
 	debug_printf("[UI] Flat object created at (%d, %d)\r\n", 2, 2);
+	*/
 
 	/* 强制刷新布局 */
 	debug_printf("[UI] Calling lv_obj_update_layout on screen...\r\n");
