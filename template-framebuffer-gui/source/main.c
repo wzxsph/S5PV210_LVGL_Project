@@ -177,7 +177,9 @@ int main(int argc, char * argv[])
 		}
 	}
 
+	debug_printf("[TEST1] Before mdelay(500)\r\n");
 	mdelay(500);
+	debug_printf("[TEST1] After mdelay(500), flush_count=%lu\r\n", (unsigned long)flush_count);
 
 	/* 7. 测试2：创建一个简单的 LVGL 控件 */
 	debug_printf("[TEST2] Creating LVGL label...\r\n");
@@ -187,16 +189,19 @@ int main(int argc, char * argv[])
 			lv_label_set_text(label, "Hello S5PV210!");
 			lv_obj_center(label);
 			lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-			debug_printf("[TEST2] Label created.\r\n");
+			debug_printf("[TEST2] Label created at %p\r\n", label);
 		} else {
 			debug_printf("[TEST2] ERROR: Failed to create label!\r\n");
 		}
 	}
 
-	/* 8. 测试 lv_timer_handler - 无任何对象 */
-	debug_printf("[TEST2] Calling lv_timer_handler() with no objects...\r\n");
-	lv_timer_handler();
-	debug_printf("[TEST2] Done. This line should print if lv_timer_handler returns.\r\n");
+	/* 8. 测试 lv_timer_handler */
+	debug_printf("[TEST2] Calling lv_timer_handler() after label create...\r\n");
+	uint32_t t0 = get_system_time_ms();
+	uint32_t result = lv_timer_handler();
+	uint32_t t1 = get_system_time_ms();
+	debug_printf("[TEST2] lv_timer_handler() returned! result=%lu elapsed=%lu ms flush=%lu\r\n",
+	             (unsigned long)result, (unsigned long)(t1 - t0), (unsigned long)flush_count);
 
 	/* 8. 进入 LVGL 主循环 */
 	debug_printf("[LOOP] Entering LVGL main loop with lv_timer_handler()...\r\n");
@@ -205,10 +210,10 @@ int main(int argc, char * argv[])
 	/* 首次调用 lv_timer_handler 的调试包装 */
 	{
 		debug_printf("[LOOP] About to call lv_timer_handler() for the FIRST time...\r\n");
-		uint32_t t0 = get_system_time_ms();
-		uint32_t result = lv_timer_handler();
-		uint32_t t1 = get_system_time_ms();
-		debug_printf("[LOOP] FIRST lv_timer_handler() returned! result=%lu elapsed=%lums flush=%lu\r\n",
+		t0 = get_system_time_ms();
+		result = lv_timer_handler();
+		t1 = get_system_time_ms();
+		debug_printf("[LOOP] FIRST lv_timer_handler() returned! result=%lu elapsed=%lu ms flush=%lu\r\n",
 		             (unsigned long)result, (unsigned long)(t1 - t0), (unsigned long)flush_count);
 	}
 

@@ -132,6 +132,7 @@ void lv_obj_redraw(lv_layer_t * layer, lv_obj_t * obj)
     lv_obj_send_event(obj, LV_EVENT_DRAW_MAIN_BEGIN, layer);
     serial_printf(2, "[REFR] lv_obj_redraw: LV_EVENT_DRAW_MAIN_BEGIN returned\r\n");
     serial_printf(2, "[REFR] lv_obj_redraw: sending LV_EVENT_DRAW_MAIN\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: calling lv_obj_send_event now...\r\n");
     lv_obj_send_event(obj, LV_EVENT_DRAW_MAIN, layer);
     serial_printf(2, "[REFR] lv_obj_redraw: LV_EVENT_DRAW_MAIN returned\r\n");
     serial_printf(2, "[REFR] lv_obj_redraw: sending LV_EVENT_DRAW_MAIN_END\r\n");
@@ -1514,6 +1515,8 @@ static void draw_buf_flush(lv_display_t * disp)
 static void call_flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * px_map)
 {
     LV_PROFILER_REFR_BEGIN;
+    serial_printf(2, "[REFR] call_flush_cb: ENTRY disp=0x%08X area=(%d,%d)-(%d,%d) px_map=0x%08X\r\n",
+                  (unsigned int)disp, area->x1, area->y1, area->x2, area->y2, (unsigned int)px_map);
     LV_TRACE_REFR("Calling flush_cb on (%d;%d)(%d;%d) area with %p image pointer",
                   (int)area->x1, (int)area->y1, (int)area->x2, (int)area->y2, (void *)px_map);
 
@@ -1532,6 +1535,7 @@ static void call_flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t *
 #endif
 
     disp->flush_cb(disp, &offset_area, px_map);
+    serial_printf(2, "[REFR] call_flush_cb: flush_cb() returned\r\n");
     lv_display_send_event(disp, LV_EVENT_FLUSH_FINISH, &offset_area);
 
     LV_PROFILER_REFR_END;
