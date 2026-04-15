@@ -68,6 +68,33 @@ void my_data_abort_handler(unsigned int lr)
 	while(1);
 }
 
+/* Undefined Instruction 异常处理函数 - 由 start.S 调用
+ * 当执行 NEON/VFP 指令但协处理器未开启时会触发此异常
+ * r0 = LR (Link Register，保存着发生异常时的返回地址)
+ * 真正的崩溃PC是 LR - 4
+ */
+void my_undef_handler(unsigned int lr)
+{
+	/* 使用 UART2 (DEBUG_UART_CH) 打印调试信息 */
+	s5pv210_serial_write_string(DEBUG_UART_CH, "\r\n\r\n===== UNDEFINED INSTRUCTION =====\r\n");
+
+	/* 打印 LR 值，真正的崩溃地址是 LR - 4 */
+	char msg[64];
+	int len;
+	len = snprintf(msg, sizeof(msg), "LR (return addr): 0x%08X\r\n", (unsigned int)lr);
+	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
+	len = snprintf(msg, sizeof(msg), "Real PC (LR-4): 0x%08X\r\n", (unsigned int)(lr - 4));
+	s5pv210_serial_write_string(DEBUG_UART_CH, msg);
+
+	s5pv210_serial_write_string(DEBUG_UART_CH, " Likely caused by NEON/VFP instruction without FPU enabled\r\n");
+	s5pv210_serial_write_string(DEBUG_UART_CH, " Check start.S: need to enable CP10/CP11 (FPU) in CP15\r\n");
+
+	s5pv210_serial_write_string(DEBUG_UART_CH, "======================\r\n");
+
+	/* 死循环，保留现场供调试 */
+	while(1);
+}
+
 /* LVGL 日志回调函数 */
 static void my_log_print_cb(lv_log_level_t level, const char * buf)
 {
@@ -224,16 +251,23 @@ int main(int argc, char * argv[])
 	lv_port_disp_init();
 	debug_printf("[DISP] lv_port_disp_init() returned!\r\n");
 
-	/* 5. 创建screen和label（先于lv_timer_handler调用） */
-	debug_printf("\r\n[UI] Creating screen and label...\r\n");
+	/* 5. 创建screen和obj（先于lv_timer_handler调用） */
+	debug_printf("\r\n[UI] Creating screen and object...\r\n");
 	lv_obj_t * scr = lv_scr_act();
 	debug_printf("[UI] Active screen: %p\r\n", (void *)scr);
 
-	/* 不创建任何UI控件，先测试裸的lv_timer_handler */
-	debug_printf("[UI] Skipping UI creation - testing bare lv_timer_handler\r\n");
+	/* 创建一个完全扁平的 obj，无圆角无阴影 */
+	lv_obj_t * obj = lv_obj_create(scr);
+	lv_obj_set_size(obj, 200, 60);
+	lv_obj_set_pos(obj, 412, 270);
+	/* 移除所有圆角和阴影 */
+	lv_obj_set_style_radius(obj, 0, 0);
+	lv_obj_set_style_shadow_width(obj, 0, 0);
+	lv_obj_set_style_border_width(obj, 0, 0);
+	debug_printf("[UI] Flat object created at (%d, %d)\r\n", 412, 270);
 
-	/* 强制刷新布局，排查是否是 UI 创建时的问题 */
-	debug_printf("[UI] Calling lv_obj_update_layout on empty screen...\r\n");
+	/* 强制刷新布局 */
+	debug_printf("[UI] Calling lv_obj_update_layout on screen...\r\n");
 	lv_obj_update_layout(scr);
 	debug_printf("[UI] lv_obj_update_layout returned\r\n");
 
@@ -250,9 +284,10 @@ int main(int argc, char * argv[])
 	debug_printf("[TEST] Stack test complete, calling lv_timer_handler()...\r\n");
 
 	t0 = get_system_time_ms();
+	debug_printf("[TEST] Before lv_timer_handler() call, flush_count=%lu\r\n", (unsigned long)flush_count);
 	result = lv_timer_handler();
 	t1 = get_system_time_ms();
-	debug_printf("[TEST] lv_timer_handler() returned! result=%lu elapsed=%lu ms flush=%lu\r\n",
+	debug_printf("[TEST] lv_timer_handler() RETURNED! result=%lu elapsed=%lu ms flush=%lu\r\n",
 	             (unsigned long)result, (unsigned long)(t1 - t0), (unsigned long)flush_count);
 
 	/* 7. 进入主循环 */
@@ -261,7 +296,9 @@ int main(int argc, char * argv[])
 
 	while(1) {
 		loop_count++;
+		debug_printf("[LOOP] About to call lv_timer_handler(), loop=%lu\r\n", (unsigned long)loop_count);
 		lv_timer_handler();
+		debug_printf("[LOOP] lv_timer_handler() returned, loop=%lu\r\n", (unsigned long)loop_count);
 
 		if ((get_system_time_ms() - last_debug_time) >= 3000) {
 			last_debug_time = get_system_time_ms();

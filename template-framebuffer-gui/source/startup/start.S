@@ -144,7 +144,10 @@ cp:
  * exception handlers
  */
 undefined_instruction:
-	b	.
+	/* 保存 LR 到 r0，然后调用 C 异常处理函数 */
+	mov r0, lr
+	bl my_undef_handler
+	b .
 
 software_interrupt:
 	b	.

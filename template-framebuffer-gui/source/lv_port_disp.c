@@ -13,8 +13,9 @@ extern uint32_t get_system_time_ms(void);
 #define MY_DISP_HOR_RES  1024
 #define MY_DISP_VER_RES  600
 
-/* 渲染缓冲区：分配 48 行的部分缓冲（约 192KB）*/
-static uint8_t buf_1[MY_DISP_HOR_RES * 48 * 4];
+/* 渲染缓冲区：分配 48 行的部分缓冲
+ * 64 字节对齐是 LVGL v9 SW 渲染器的强制要求 */
+static uint8_t buf_1[MY_DISP_HOR_RES * 48 * 4] __attribute__((aligned(64)));
 
 /* 调试统计 */
 uint32_t flush_count = 0;

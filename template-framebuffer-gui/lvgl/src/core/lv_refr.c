@@ -1484,13 +1484,17 @@ static void wait_for_flushing(lv_display_t * disp)
         }
     }
     else {
+        LV_LOG_TRACE("wait_for_flushing: about to enter while loop, flushing=%d", disp->flushing);
         while(disp->flushing);
+        LV_LOG_TRACE("wait_for_flushing: exited while loop");
     }
     disp->flushing_last = 0;
 
     lv_display_send_event(disp, LV_EVENT_FLUSH_WAIT_FINISH, NULL);
 
     LV_LOG_TRACE("end");
+    /* HACK: Use LV_LOG_WARN to ensure this message is printed even if TRACE is filtered */
+    LV_LOG_WARN("wait_for_flushing: about to return now!");
     LV_PROFILER_REFR_END;
 }
 
