@@ -41,35 +41,39 @@
 
 void LV_ATTRIBUTE_FAST_MEM lv_draw_rect_dsc_init(lv_draw_rect_dsc_t * dsc)
 {
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_memzero\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E1\r\n");
     lv_memzero(dsc, sizeof(lv_draw_rect_dsc_t));
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: lv_memzero done\r\n");
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_white\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E2\r\n");
     dsc->bg_color = lv_color_white();
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: lv_color_white done\r\n");
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_white for stop[0]\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E3\r\n");
     dsc->bg_grad.stops[0].color = lv_color_white();
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: stop[0].color done\r\n");
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_black for stop[1]\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E4\r\n");
     dsc->bg_grad.stops[1].color = lv_color_black();
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: stop[1].color done\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E5\r\n");
     dsc->bg_grad.stops[1].frac = 0xFF;
+    serial_printf(2, "[DRAW] rect_dsc_init: E6\r\n");
     dsc->bg_grad.stops_count = 2;
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_black for border_color\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E7\r\n");
     dsc->border_color = lv_color_black();
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: border_color done\r\n");
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: calling lv_color_black for shadow_color\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E8\r\n");
     dsc->shadow_color = lv_color_black();
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: shadow_color done\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E9\r\n");
     dsc->bg_image_symbol_font = LV_FONT_DEFAULT;
+    serial_printf(2, "[DRAW] rect_dsc_init: E10\r\n");
     dsc->bg_opa = LV_OPA_COVER;
+    serial_printf(2, "[DRAW] rect_dsc_init: E11\r\n");
     dsc->bg_image_opa = LV_OPA_COVER;
+    serial_printf(2, "[DRAW] rect_dsc_init: E12\r\n");
     dsc->outline_opa = LV_OPA_COVER;
+    serial_printf(2, "[DRAW] rect_dsc_init: E13\r\n");
     dsc->border_opa = LV_OPA_COVER;
+    serial_printf(2, "[DRAW] rect_dsc_init: E14\r\n");
     dsc->shadow_opa = LV_OPA_COVER;
+    serial_printf(2, "[DRAW] rect_dsc_init: E15\r\n");
     dsc->border_side = LV_BORDER_SIDE_FULL;
+    serial_printf(2, "[DRAW] rect_dsc_init: E16\r\n");
     dsc->base.dsc_size = sizeof(lv_draw_rect_dsc_t);
-    serial_printf(2, "[DRAW] lv_draw_rect_dsc_init: ALL DONE\r\n");
+    serial_printf(2, "[DRAW] rect_dsc_init: E17 ALL DONE\r\n");
 }
 
 void lv_draw_fill_dsc_init(lv_draw_fill_dsc_t * dsc)
@@ -171,30 +175,52 @@ void lv_draw_box_shadow(lv_layer_t * layer, const lv_draw_box_shadow_dsc_t * dsc
 void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
 {
     serial_printf(2, "[DRAW] lv_draw_rect: called\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect: A\r\n");
     LV_PROFILER_DRAW_BEGIN;
+    serial_printf(2, "[DRAW] lv_draw_rect: B after profiler\r\n");
 
     bool has_shadow;
     bool has_fill;
     bool has_border;
     bool has_outline;
     bool has_bg_img;
+    serial_printf(2, "[DRAW] lv_draw_rect: C after bool decl\r\n");
 
+    serial_printf(2, "[DRAW] lv_draw_rect: D before shadow check\r\n");
     if(dsc->shadow_width == 0 ||
        dsc->shadow_opa <= LV_OPA_MIN ||
        (dsc->shadow_width == 1 && dsc->shadow_spread <= 0 &&
         dsc->shadow_offset_x == 0 && dsc->shadow_offset_y == 0)) {
         has_shadow = false;
+        serial_printf(2, "[DRAW] lv_draw_rect: D1 has_shadow=false\r\n");
     }
     else {
         has_shadow = true;
+        serial_printf(2, "[DRAW] lv_draw_rect: D2 has_shadow=true\r\n");
+    }
+    serial_printf(2, "[DRAW] lv_draw_rect: E after shadow check\r\n");
+
+    serial_printf(2, "[DRAW] lv_draw_rect: E0 checking bg_opa=%d LV_OPA_MIN=%d\r\n", dsc->bg_opa, LV_OPA_MIN);
+    if(dsc->bg_opa <= LV_OPA_MIN) {
+        has_fill = false;
+        serial_printf(2, "[DRAW] lv_draw_rect: E1 has_fill=false\r\n");
+    }
+    else {
+        has_fill = true;
+        serial_printf(2, "[DRAW] lv_draw_rect: E1 has_fill=true\r\n");
     }
 
-    if(dsc->bg_opa <= LV_OPA_MIN) has_fill = false;
-    else has_fill = true;
-
-    if(dsc->bg_image_opa <= LV_OPA_MIN || dsc->bg_image_src == NULL) has_bg_img = false;
-    else has_bg_img = true;
-
+    serial_printf(2, "[DRAW] lv_draw_rect: E2 checking bg_image\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect: E2 bg_image_opa=%d src=%p\r\n", dsc->bg_image_opa, dsc->bg_image_src);
+    if(dsc->bg_image_opa <= LV_OPA_MIN || dsc->bg_image_src == NULL) {
+        has_bg_img = false;
+        serial_printf(2, "[DRAW] lv_draw_rect: E3 has_bg_img=false\r\n");
+    }
+    else {
+        has_bg_img = true;
+        serial_printf(2, "[DRAW] lv_draw_rect: E3 has_bg_img=true\r\n");
+    }
+    serial_printf(2, "[DRAW] lv_draw_rect: E4 checking border\r\n");
     if(dsc->border_opa <= LV_OPA_MIN
        || dsc->border_width == 0
        || dsc->border_post == true
