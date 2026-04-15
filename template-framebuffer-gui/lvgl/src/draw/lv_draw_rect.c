@@ -221,12 +221,20 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
         serial_printf(2, "[DRAW] lv_draw_rect: E3 has_bg_img=true\r\n");
     }
     serial_printf(2, "[DRAW] lv_draw_rect: E4 checking border\r\n");
+    serial_printf(2, "[DRAW] lv_draw_rect: E4 border_opa=%d width=%d post=%d side=%d\r\n",
+                  dsc->border_opa, dsc->border_width, dsc->border_post, dsc->border_side);
     if(dsc->border_opa <= LV_OPA_MIN
        || dsc->border_width == 0
        || dsc->border_post == true
-       || dsc->border_side == LV_BORDER_SIDE_NONE) has_border = false;
-    else has_border = true;
-
+       || dsc->border_side == LV_BORDER_SIDE_NONE) {
+        has_border = false;
+        serial_printf(2, "[DRAW] lv_draw_rect: E5 has_border=false\r\n");
+    }
+    else {
+        has_border = true;
+        serial_printf(2, "[DRAW] lv_draw_rect: E5 has_border=true\r\n");
+    }
+    serial_printf(2, "[DRAW] lv_draw_rect: E6 checking outline\r\n");
     if(dsc->outline_opa <= LV_OPA_MIN || dsc->outline_width == 0) has_outline = false;
     else has_outline = true;
 
