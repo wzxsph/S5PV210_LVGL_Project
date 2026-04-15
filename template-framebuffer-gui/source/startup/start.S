@@ -91,6 +91,9 @@ reset:
 	ldr	r0, =_start
 	mcr	p15, 0, r0, c12, c0, 0
 
+	/* Initialize MMU with flat translation table, then enable caches and MMU */
+	bl	mmu_init
+
 	/* clear bss section */
 clear_bss:
 	ldr	r0, _bss_start
@@ -103,6 +106,100 @@ clear_bss:
 	mov r1, #0;
 	bl	main			/* call main function */
 	b	.
+
+/*
+ * MMU initialization - sets up flat translation table and enables caches/MMU
+ *
+ * Memory map for S5PV210:
+ *   0x00000000-0x1FFFFFFF: Reserved (identity-mapped, strongly-ordered)
+ *   0x20000000-0x3FFFFFFF: SDRAM (512MB) - normal cached memory
+ *   0x40000000-0x7FFFFFFF: Reserved
+ *   0x80000000-0x8FFFFFFF: Reserved
+ *   0xD0020000-0xD0037FFF: iRAM - normal cached memory
+ *   0xE0000000-0xFFFFFFFF: SFR/Peripherals - strongly-ordered device
+ *
+ * ARMv7 Section Descriptor format (32-bit L1 page table entry):
+ *   [31:20] = Section base PA[31:20] (maps 1MB per entry)
+ *   [15:12] = Domain (we use domain 0)
+ *   [11:10] = AP[1:0] (0b11 = full access r/w in privileged and user)
+ *   [4]    = XN (Execute Never: 0 = executable)
+ *   [3]    = C (Cacheable)
+ *   [2]    = B (Bufferable)
+ *   [1]    = Always 1 (section descriptor type)
+ *
+ * Memory type encoding (following U-Boot S5PV210 MMU table):
+ *   Strongly-ordered (device): C=0, B=0, XN=1, domain=0, AP=11 -> base|C0000412
+ *   Normal SDRAM (wt/wb):     C=1, B=1, XN=0, domain=0, AP=11 -> base|C0000C1E
+ */
+mmu_init:
+	/* r0 = table base, r1 = current entry, r2 = descriptor temp */
+
+	/* Load translation table base (16KB-aligned) */
+	ldr	r0, _mmu_table_start
+
+	/* Fill entire 16KB table (4096 entries) with strongly-ordered default.
+	 * Default descriptor = section_num | 0xC0000412:
+	 *   base = section_num << 20, C=0, B=0, XN=1, domain=0, AP=11 */
+	mov	r1, #0
+mmu_fill_loop:
+	cmp	r1, #4096
+	beq	mmu_fill_loop_end
+	orr	r2, r1, r1, lsl #20     /* r2 = section_num | (section_num << 20) - but we need OR with 0xC0000412 */
+	/* The descriptor for strongly-ordered: base[31:20]|0xC0000412 */
+	/* Actually simpler: just use section_num shifted to position, OR with attrs */
+	mov	r2, r1, lsl #20
+	orr	r2, r2, #0xC0000412
+	str	r2, [r0], #4
+	add	r1, r1, #1
+	b	mmu_fill_loop
+mmu_fill_loop_end:
+
+	/* Now override SDRAM sections 0x200-0x3FF to be cacheable (wt/wb).
+	 * Descriptor = section_num | 0xC0000C1E (C=1, B=1, XN=0, domain=0, AP=11) */
+	ldr	r0, _mmu_table_start
+	add	r0, r0, #0x800   /* Entry 0x200: offset = 0x200 * 4 = 0x800 */
+	mov	r1, #0x200
+mmu_sdram_loop:
+	cmp	r1, #0x400      /* Sections 0x200 through 0x3FF = 512 entries */
+	beq	mmu_sdram_done
+	mov	r2, r1, lsl #20
+	orr	r2, r2, #0xC0000C1E
+	str	r2, [r0], #4
+	add	r1, r1, #1
+	b	mmu_sdram_loop
+mmu_sdram_done:
+
+	/* Set iRAM section 0xD0 (0xD002_0000) as cacheable (same as SDRAM)
+	 * Entry 0xD0: offset = 0xD0 * 4 = 0x340 */
+	ldr	r0, _mmu_table_start
+	add	r0, r0, #0x340
+	mov	r2, #0xD0, lsl #20
+	orr	r2, r2, #0xC0000C1E
+	str	r2, [r0]
+
+	/* Set TTBR0 (Translation Table Base Register 0) */
+	ldr	r0, _mmu_table_start
+	mcr	p15, 0, r0, c2, c0, 0
+
+	/* Set DACR: domain 0 = client (0x1), domains 1-15 = no access (0x0) */
+	mov	r0, #0x00000001
+	mcr	p15, 0, r0, c3, c0, 0
+
+	/* Enable I-cache, D-cache, and MMU via SCTLR */
+	mrc	p15, 0, r0, c1, c0, 0
+	orr	r0, r0, #(1 << 12)   /* I-bit: Enable I-cache */
+	orr	r0, r0, #(1 << 2)    /* C-bit: Enable D-cache */
+	orr	r0, r0, #(1 << 0)    /* M-bit: Enable MMU */
+	/* A-bit (strict alignment) was already cleared earlier */
+	mcr	p15, 0, r0, c1, c0, 0
+
+	/* ISB to ensure new mapping takes effect */
+	isb	sy
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c5, 0    /* Invalidate instruction cache */
+	mcr	p15, 0, r0, c7, c10, 4   /* Drain write buffer (DSB) */
+
+	mov	pc, lr
 
 /*
  * initialize stacks

@@ -149,9 +149,11 @@ static void do_system_initial(void)
 	s5pv210_clk_initial();
 	debug_printf("[INIT] s5pv210_clk_initial() done\r\n");
 
-	/* 注意：暂时禁用 Cache 和 MMU，因为没有正确的翻译表会导致显示异常 */
-	/* TODO: 后续需要正确配置 MMU 翻译表后才能启用缓存以提升渲染性能 */
-	debug_printf("[INIT] Cache and MMU disabled for display correctness\r\n");
+	/* 注意：Cache 和 MMU 已由 start.S 中的 mmu_init 启用
+	 * MMU翻译表配置：SDRAM 0x20000000-0x3FFFFFFF 可缓存/可缓冲，iRAM 0xD0020000 可缓存
+	 *Framebuffer 0x3E000000 非缓存(NC)属性确保显示正确
+	 */
+	debug_printf("[INIT] Cache and MMU enabled by start.S (SDRAM cached, FB NC)\r\n");
 
 	s5pv210_irq_initial();
 	debug_printf("[INIT] s5pv210_irq_initial() done\r\n");
@@ -294,16 +296,14 @@ int main(int argc, char * argv[])
 	debug_printf("[UI] Active screen: %p\r\n", (void *)scr);
 
 	/* 创建一个完全扁平的 obj，无圆角无阴影 */
-	/* [DEBUG] 注释掉UI创建代码以测试是否是内存踩踏导致死锁
 	lv_obj_t * obj = lv_obj_create(scr);
-	lv_obj_set_size(obj, 20, 10);  // 32x32 快速测试模式下的小尺寸
-	lv_obj_set_pos(obj, 2, 2);     // 32x32 可见范围内
-	// 移除所有圆角和阴影
+	lv_obj_set_size(obj, 20, 10);
+	lv_obj_set_pos(obj, 2, 2);
+	/* 移除所有圆角和阴影 */
 	lv_obj_set_style_radius(obj, 0, 0);
 	lv_obj_set_style_shadow_width(obj, 0, 0);
 	lv_obj_set_style_border_width(obj, 0, 0);
 	debug_printf("[UI] Flat object created at (%d, %d)\r\n", 2, 2);
-	*/
 
 	/* 强制刷新布局 */
 	debug_printf("[UI] Calling lv_obj_update_layout on screen...\r\n");

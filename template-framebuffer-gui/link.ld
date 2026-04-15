@@ -51,7 +51,12 @@ SECTIONS
 		*(.sbss)
 		*(.COMMON)
 		PROVIDE (__bss_end = .);
-		
+
+		. = ALIGN(16384);
+		PROVIDE (__mmu_table_start = .);
+		. = . + 16384;
+		PROVIDE (__mmu_table_end = .);
+
 		. = ALIGN(8);
 		PROVIDE (__heap_start = .);
 		*(.heap)
