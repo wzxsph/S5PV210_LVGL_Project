@@ -106,38 +106,45 @@ void lv_refr_now(lv_display_t * disp)
 
 void lv_obj_redraw(lv_layer_t * layer, lv_obj_t * obj)
 {
-    serial_printf(2, "[REFR] lv_obj_redraw: called obj=%p\r\n", obj);
+    serial_printf(2, "[REFR] lv_obj_redraw: ENTRY obj=%p\r\n", obj);
     LV_PROFILER_REFR_BEGIN;
     lv_area_t clip_area_ori = layer->_clip_area;
+    serial_printf(2, "[REFR] lv_obj_redraw: line 111 done\r\n");
     lv_area_t clip_coords_for_obj;
 
     /*The widget will be rendered.
      *So setters from now should use animations. */
     obj->rendered = 1;
+    serial_printf(2, "[REFR] lv_obj_redraw: line 116 done, obj->rendered=1\r\n");
 
     /*Truncate the clip area to `obj size + ext size` area*/
     lv_area_t obj_coords_ext;
     lv_obj_get_coords(obj, &obj_coords_ext);
+    serial_printf(2, "[REFR] lv_obj_redraw: line 120 done, lv_obj_get_coords done\r\n");
     int32_t ext_draw_size = lv_obj_get_ext_draw_size(obj);
+    serial_printf(2, "[REFR] lv_obj_redraw: line 122 done, ext_draw_size=%d\r\n", ext_draw_size);
     lv_area_increase(&obj_coords_ext, ext_draw_size, ext_draw_size);
+    serial_printf(2, "[REFR] lv_obj_redraw: line 124 done\r\n");
 
     if(!lv_area_intersect(&clip_coords_for_obj, &clip_area_ori, &obj_coords_ext)) {
+        serial_printf(2, "[REFR] lv_obj_redraw: line 125, no intersection, returning\r\n");
         LV_PROFILER_REFR_END;
         return;
     }
+    serial_printf(2, "[REFR] lv_obj_redraw: line 129, intersection found\r\n");
     /*If the object is visible on the current clip area*/
     layer->_clip_area = clip_coords_for_obj;
+    serial_printf(2, "[REFR] lv_obj_redraw: line 131, clip_area set\r\n");
 
-    serial_printf(2, "[REFR] lv_obj_redraw: sending LV_EVENT_DRAW_MAIN_BEGIN\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: line 132, about to send LV_EVENT_DRAW_MAIN_BEGIN\r\n");
     lv_obj_send_event(obj, LV_EVENT_DRAW_MAIN_BEGIN, layer);
-    serial_printf(2, "[REFR] lv_obj_redraw: LV_EVENT_DRAW_MAIN_BEGIN returned\r\n");
-    serial_printf(2, "[REFR] lv_obj_redraw: sending LV_EVENT_DRAW_MAIN\r\n");
-    serial_printf(2, "[REFR] lv_obj_redraw: calling lv_obj_send_event now...\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: line 133, LV_EVENT_DRAW_MAIN_BEGIN done\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: line 134, about to send LV_EVENT_DRAW_MAIN\r\n");
     lv_obj_send_event(obj, LV_EVENT_DRAW_MAIN, layer);
-    serial_printf(2, "[REFR] lv_obj_redraw: LV_EVENT_DRAW_MAIN returned\r\n");
-    serial_printf(2, "[REFR] lv_obj_redraw: sending LV_EVENT_DRAW_MAIN_END\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: line 136, LV_EVENT_DRAW_MAIN done\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: line 137, about to send LV_EVENT_DRAW_MAIN_END\r\n");
     lv_obj_send_event(obj, LV_EVENT_DRAW_MAIN_END, layer);
-    serial_printf(2, "[REFR] lv_obj_redraw: LV_EVENT_DRAW_MAIN_END returned\r\n");
+    serial_printf(2, "[REFR] lv_obj_redraw: line 139, LV_EVENT_DRAW_MAIN_END done\r\n");
 #if LV_USE_REFR_DEBUG
     lv_color_t debug_color = lv_color_make(lv_rand(0, 0xFF), lv_rand(0, 0xFF), lv_rand(0, 0xFF));
     lv_draw_rect_dsc_t draw_dsc;
@@ -151,25 +158,35 @@ void lv_obj_redraw(lv_layer_t * layer, lv_obj_t * obj)
 #endif
 
     const lv_area_t * obj_coords;
+    serial_printf(2, "[REFR] lv_obj_redraw: line 161, checking overflow flag\r\n");
     if(lv_obj_has_flag(obj, LV_OBJ_FLAG_OVERFLOW_VISIBLE)) {
         obj_coords = &obj_coords_ext;
     }
     else {
         obj_coords = &obj->coords;
     }
+    serial_printf(2, "[REFR] lv_obj_redraw: line 167, obj_coords set\r\n");
     lv_area_t clip_coords_for_children;
     bool refr_children = true;
     if(!lv_area_intersect(&clip_coords_for_children, &layer->_clip_area, obj_coords) || layer->opa <= LV_OPA_MIN) {
         refr_children = false;
     }
+    serial_printf(2, "[REFR] lv_obj_redraw: line 172, refr_children=%d\r\n", refr_children);
 
     if(refr_children) {
         uint32_t i;
         uint32_t child_cnt = lv_obj_get_child_count(obj);
+        serial_printf(2, "[REFR] lv_obj_redraw: line 175, child_cnt=%u\r\n", child_cnt);
         if(child_cnt == 0) {
             /*If the object was visible on the clip area call the post draw events too*/
             /*If all the children are redrawn make 'post draw' draw*/
+            serial_printf(2, "[REFR] lv_obj_redraw: line 179, calling LV_EVENT_DRAW_POST\r\n");
             lv_obj_send_event(obj, LV_EVENT_DRAW_POST_BEGIN, layer);
+            serial_printf(2, "[REFR] lv_obj_redraw: line 180\r\n");
+            lv_obj_send_event(obj, LV_EVENT_DRAW_POST, layer);
+            serial_printf(2, "[REFR] lv_obj_redraw: line 181\r\n");
+            lv_obj_send_event(obj, LV_EVENT_DRAW_POST_END, layer);
+            serial_printf(2, "[REFR] lv_obj_redraw: line 182, LV_EVENT_DRAW_POST done\r\n");
             lv_obj_send_event(obj, LV_EVENT_DRAW_POST, layer);
             lv_obj_send_event(obj, LV_EVENT_DRAW_POST_END, layer);
         }
