@@ -91,8 +91,101 @@ reset:
 	ldr	r0, =_start
 	mcr	p15, 0, r0, c12, c0, 0
 
-	/* Initialize MMU with flat translation table, then enable caches and MMU */
+	/* MMU initialization using __mmu_table_start (following reference approach) */
+mmu_init:
+	/* Step 1: Fill entire 4GB table with DEVICE (strongly-ordered) */
+	movw	r0, #:lower16:__mmu_table_start
+	movt	r0, #:upper16:__mmu_table_start
+	mov	r1, #0
+	/* Load DEVICE attribute: 0xC02 */
+	movw	r3, #0x0C02
+mmu_fill_device:
+	cmp	r1, #4096
+	beq	mmu_fill_device_end
+	mov	r2, r1, lsl #20
+	orr	r2, r2, r3
+	str	r2, [r0], #4
+	add	r1, r1, #1
+	b	mmu_fill_device
+mmu_fill_device_end:
+
+	/* Step 2: Override RAM sections (0x200-0x3FF) with NORMAL (cacheable) */
+	movw	r0, #:lower16:__mmu_table_start
+	movt	r0, #:upper16:__mmu_table_start
+	add	r0, r0, #(0x200 * 4)
+	mov	r1, #0x200
+	/* Load NORMAL attribute: 0xC1E */
+	movw	r3, #0x0C1E
+mmu_fill_normal:
+	cmp	r1, #0x400
+	beq	mmu_fill_normal_end
+	mov	r2, r1, lsl #20
+	orr	r2, r2, r3
+	str	r2, [r0], #4
+	add	r1, r1, #1
+	b	mmu_fill_normal
+mmu_fill_normal_end:
+
+	/* Step 3: Set TTB0 */
+	movw	r0, #:lower16:__mmu_table_start
+	movt	r0, #:upper16:__mmu_table_start
+	mcr	p15, 0, r0, c2, c0, 0
+
+	/* Step 4: Set domain access control - ALL domains manager mode */
+	movw	r0, #0xFFFF
+	movt	r0, #0xFFFF
+	mcr	p15, 0, r0, c3, c0, 0
+
+	/* Step 5: Invalidate I-cache, B-pred, TLB */
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c5, 0    /* I-cache */
+	mcr	p15, 0, r0, c7, c5, 6    /* B-pred */
+	mcr	p15, 0, r0, c8, c7, 0    /* TLB */
+
+	/* Step 6: Invalidate D-cache using set/way */
+	mrc	p15, 1, r0, c0, c0, 0
+	ldr	r3, =0x1ff
+	and	r0, r3, r0, lsr #13
+	mov	r1, #0
+mmu_dcache_way:
+	mov	r3, #0
+mmu_dcache_set:
+	mov	r2, r1, lsl #30
+	orr	r2, r3, lsl #5
+	mcr	p15, 0, r2, c7, c6, 2
+	add	r3, r3, #1
+	cmp	r0, r3
+	bgt	mmu_dcache_set
+	add	r1, r1, #1
+	cmp	r1, #4
+	bne	mmu_dcache_way
+
+	dsb
+	isb
+
+	/* Step 7: Enable MMU, I-cache, D-cache, branch pred, alignment */
+	mrc	p15, 0, r0, c1, c0, 0
+	bic	r0, r0, #0x3000      /* Clear V, I */
+	bic	r0, r0, #0x0087      /* Clear B, C, A, M */
+	orr	r0, r0, #0x0002      /* A: enable alignment check */
+	orr	r0, r0, #0x0004      /* C: enable D-cache */
+	orr	r0, r0, #0x1000      /* I: enable I-cache */
+	orr	r0, r0, #0x0800      /* Z: enable branch pred */
+	orr	r0, r0, #0x0001      /* M: enable MMU */
+	mcr	p15, 0, r0, c1, c0, 0
+
+	dsb
+	isb
+
+	mov	pc, lr
+
+	/* Call mmu_init */
 	bl	mmu_init
+
+	/* DEBUG NOPs */
+	nop
+	nop
+	nop
 
 	/* clear bss section */
 clear_bss:
@@ -124,84 +217,6 @@ clear_bss:
  *   [11:10] = AP[1:0] (0b11 = full access r/w in privileged and user)
  *   [4]    = XN (Execute Never: 0 = executable)
  *   [3]    = C (Cacheable)
- *   [2]    = B (Bufferable)
- *   [1]    = Always 1 (section descriptor type)
- *
- * Memory type encoding (following U-Boot S5PV210 MMU table):
- *   Strongly-ordered (device): C=0, B=0, XN=1, domain=0, AP=11 -> base|C0000412
- *   Normal SDRAM (wt/wb):     C=1, B=1, XN=0, domain=0, AP=11 -> base|C0000C1E
- */
-mmu_init:
-	/* r0 = table base, r1 = current entry, r2 = descriptor temp */
-
-	/* Load translation table base (16KB-aligned) */
-	ldr	r0, _mmu_table_start
-
-	/* Fill entire 16KB table (4096 entries) with strongly-ordered default.
-	 * Default descriptor = section_num | 0xC0000412:
-	 *   base = section_num << 20, C=0, B=0, XN=1, domain=0, AP=11 */
-	mov	r1, #0
-mmu_fill_loop:
-	cmp	r1, #4096
-	beq	mmu_fill_loop_end
-	mov	r2, r1, lsl #20
-	ldr	r3, =0xC0000412
-	orr	r2, r2, r3
-	str	r2, [r0], #4
-	add	r1, r1, #1
-	b	mmu_fill_loop
-mmu_fill_loop_end:
-
-	/* Now override SDRAM sections 0x200-0x3FF to be cacheable (wt/wb).
-	 * Descriptor = section_num | 0xC0000C1E (C=1, B=1, XN=0, domain=0, AP=11) */
-	ldr	r0, _mmu_table_start
-	add	r0, r0, #0x800   /* Entry 0x200: offset = 0x200 * 4 = 0x800 */
-	mov	r1, #0x200
-mmu_sdram_loop:
-	cmp	r1, #0x400      /* Sections 0x200 through 0x3FF = 512 entries */
-	beq	mmu_sdram_done
-	mov	r2, r1, lsl #20
-	ldr	r3, =0xC0000C1E
-	orr	r2, r2, r3
-	str	r2, [r0], #4
-	add	r1, r1, #1
-	b	mmu_sdram_loop
-mmu_sdram_done:
-
-	/* Set iRAM section 0xD0 (0xD002_0000) as cacheable (same as SDRAM)
-	 * Entry 0xD0: offset = 0xD0 * 4 = 0x340 */
-	ldr	r0, _mmu_table_start
-	add	r0, r0, #0x340
-	mov	r2, #0xD0
-	mov	r2, r2, lsl #20
-	ldr	r3, =0xC0000C1E
-	orr	r2, r2, r3
-	str	r2, [r0]
-
-	/* Set TTBR0 (Translation Table Base Register 0) */
-	ldr	r0, _mmu_table_start
-	mcr	p15, 0, r0, c2, c0, 0
-
-	/* Set DACR: domain 0 = client (0x1), domains 1-15 = no access (0x0) */
-	mov	r0, #0x00000001
-	mcr	p15, 0, r0, c3, c0, 0
-
-	/* Enable I-cache, D-cache, and MMU via SCTLR */
-	mrc	p15, 0, r0, c1, c0, 0
-	orr	r0, r0, #(1 << 12)   /* I-bit: Enable I-cache */
-	orr	r0, r0, #(1 << 2)    /* C-bit: Enable D-cache */
-	orr	r0, r0, #(1 << 0)    /* M-bit: Enable MMU */
-	/* A-bit (strict alignment) was already cleared earlier */
-	mcr	p15, 0, r0, c1, c0, 0
-
-	/* ISB to ensure new mapping takes effect */
-	isb	sy
-	mov	r0, #0
-	mcr	p15, 0, r0, c7, c5, 0    /* Invalidate instruction cache */
-	mcr	p15, 0, r0, c7, c10, 4   /* Drain write buffer (DSB) */
-
-	mov	pc, lr
-
 /*
  * initialize stacks
  */
