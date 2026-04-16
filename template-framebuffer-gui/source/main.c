@@ -14,6 +14,20 @@ extern uint32_t get_system_time_ms(void);
 /* 外部声明：flush 计数（来自 lv_port_disp.c） */
 extern uint32_t flush_count;
 
+/* 演示模式相关 */
+static lv_obj_t * demo_screen = NULL;
+static uint8_t current_demo = 0;
+static const uint8_t TOTAL_DEMOS = 5;
+
+/* 演示函数声明 */
+static void demo_timer_cb(lv_timer_t * timer);
+static void create_demo_1(lv_obj_t * parent);
+static void create_demo_2(lv_obj_t * parent);
+static void create_demo_3(lv_obj_t * parent);
+static void create_demo_4(lv_obj_t * parent);
+static void create_demo_5(lv_obj_t * parent);
+static void switch_demo(uint8_t demo_num);
+
 #define DEBUG_UART_CH   2       /* 使用 UART2 进行调试输出 */
 #define DEBUG_BAUD      B115200
 
@@ -137,6 +151,246 @@ static void my_log_print_cb(lv_log_level_t level, const char * buf)
 	}
 
 	debug_printf("%s %s", level_str, buf);
+}
+
+/*-----------------------------------------------------
+ * Demo 1: 4 彩色方块 (2x2 网格)
+ *-----------------------------------------------------*/
+static void create_demo_1(lv_obj_t * parent)
+{
+	lv_obj_set_style_bg_color(parent, lv_color_hex(0x000000), 0);
+	lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
+
+	#define RECT_W 280
+	#define RECT_H 200
+	#define GAP_X  ((1024 - RECT_W * 2) / 2)
+	#define GAP_Y  ((600 - RECT_H * 2) / 2)
+
+	/* 红色矩形 - 左上 */
+	lv_obj_t * rect1 = lv_obj_create(parent);
+	lv_obj_set_size(rect1, RECT_W, RECT_H);
+	lv_obj_set_pos(rect1, GAP_X, GAP_Y);
+	lv_obj_set_style_bg_color(rect1, lv_color_hex(0xFF0000), 0);
+	lv_obj_set_style_bg_opa(rect1, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(rect1, 0, 0);
+
+	/* 绿色矩形 - 右上 */
+	lv_obj_t * rect2 = lv_obj_create(parent);
+	lv_obj_set_size(rect2, RECT_W, RECT_H);
+	lv_obj_set_pos(rect2, GAP_X + RECT_W, GAP_Y);
+	lv_obj_set_style_bg_color(rect2, lv_color_hex(0x00FF00), 0);
+	lv_obj_set_style_bg_opa(rect2, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(rect2, 0, 0);
+
+	/* 蓝色矩形 - 左下 */
+	lv_obj_t * rect3 = lv_obj_create(parent);
+	lv_obj_set_size(rect3, RECT_W, RECT_H);
+	lv_obj_set_pos(rect3, GAP_X, GAP_Y + RECT_H);
+	lv_obj_set_style_bg_color(rect3, lv_color_hex(0x0000FF), 0);
+	lv_obj_set_style_bg_opa(rect3, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(rect3, 0, 0);
+
+	/* 黄色矩形 - 右下 */
+	lv_obj_t * rect4 = lv_obj_create(parent);
+	lv_obj_set_size(rect4, RECT_W, RECT_H);
+	lv_obj_set_pos(rect4, GAP_X + RECT_W, GAP_Y + RECT_H);
+	lv_obj_set_style_bg_color(rect4, lv_color_hex(0xFFFF00), 0);
+	lv_obj_set_style_bg_opa(rect4, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(rect4, 0, 0);
+
+	LV_LOG_USER("Demo 1: 4 colored rectangles");
+}
+
+/*-----------------------------------------------------
+ * Demo 2: 彩虹色条 (水平渐变)
+ *-----------------------------------------------------*/
+static void create_demo_2(lv_obj_t * parent)
+{
+	lv_obj_set_style_bg_color(parent, lv_color_hex(0x000000), 0);
+	lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
+
+	/* 7个彩色条带代表彩虹色 */
+	static const uint32_t colors[] = {
+		0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3
+	};
+	uint32_t bar_height = 600 / 7;  /* 85 */
+
+	for (int i = 0; i < 7; i++) {
+		lv_obj_t * bar = lv_obj_create(parent);
+		lv_obj_set_size(bar, 1024, bar_height);
+		lv_obj_set_pos(bar, 0, i * bar_height);
+		lv_obj_set_style_bg_color(bar, lv_color_hex(colors[i]), 0);
+		lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
+		lv_obj_set_style_radius(bar, 0, 0);
+		lv_obj_set_style_border_width(bar, 0, 0);
+	}
+
+	LV_LOG_USER("Demo 2: Rainbow bars");
+}
+
+/*-----------------------------------------------------
+ * Demo 3: 大圆形 + 小圆形群
+ *-----------------------------------------------------*/
+static void create_demo_3(lv_obj_t * parent)
+{
+	lv_obj_set_style_bg_color(parent, lv_color_hex(0x1a1a2e), 0);
+	lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
+
+	/* 中心大黄色圆形 */
+	lv_obj_t * center = lv_obj_create(parent);
+	lv_obj_set_size(center, 300, 300);
+	lv_obj_set_pos(center, (1024 - 300) / 2, (600 - 300) / 2);
+	lv_obj_set_style_bg_color(center, lv_color_hex(0xFFD700), 0);
+	lv_obj_set_style_bg_opa(center, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(center, 150, 0);  /* 圆形 */
+
+	/* 周围8个小彩色圆形 */
+	static const uint32_t circle_colors[] = {
+		0xFF6B6B, 0x4ECDC4, 0x45B7D1, 0x96CEB4, 0xFECE4E, 0xFF9F43, 0xEE5A24, 0x9B59B6
+	};
+	/* 预计算8个位置的坐标 (围绕中心 512,300) */
+	static const int positions[8][2] = {
+		{512 + 140, 300},      /* 0° - 右 */
+		{512 + 99, 300 + 99},   /* 45° */
+		{512, 300 + 140},      /* 90° - 下 */
+		{512 - 99, 300 + 99},  /* 135° */
+		{512 - 140, 300},      /* 180° - 左 */
+		{512 - 99, 300 - 99},  /* 225° */
+		{512, 300 - 140},      /* 270° - 上 */
+		{512 + 99, 300 - 99}   /* 315° */
+	};
+	for (int i = 0; i < 8; i++) {
+		int cx = positions[i][0];
+		int cy = positions[i][1];
+
+		lv_obj_t * circle = lv_obj_create(parent);
+		lv_obj_set_size(circle, 60, 60);
+		lv_obj_set_pos(circle, cx - 30, cy - 30);
+		lv_obj_set_style_bg_color(circle, lv_color_hex(circle_colors[i]), 0);
+		lv_obj_set_style_bg_opa(circle, LV_OPA_COVER, 0);
+		lv_obj_set_style_radius(circle, 30, 0);
+	}
+
+	LV_LOG_USER("Demo 3: Circles");
+}
+
+/*-----------------------------------------------------
+ * Demo 4: 彩色小方块网格 (8x6)
+ *-----------------------------------------------------*/
+static void create_demo_4(lv_obj_t * parent)
+{
+	lv_obj_set_style_bg_color(parent, lv_color_hex(0x16213e), 0);
+	lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
+
+	static const uint32_t colors[] = {
+		0xE94560, 0x0F3460, 0x533483, 0x1A1A2E, 0x16213E, 0x0F3460,
+		0xE94560, 0x533483, 0x4ECDC4, 0x45B7D1, 0x96CEB4, 0xFECE4E
+	};
+	uint32_t sq_size = 80;
+	uint32_t gap = (1024 - 8 * sq_size) / 9;  /* 28 */
+	uint32_t gap_y = (600 - 6 * sq_size) / 7;  /* 34 */
+
+	for (int row = 0; row < 6; row++) {
+		for (int col = 0; col < 8; col++) {
+			lv_obj_t * sq = lv_obj_create(parent);
+			lv_obj_set_size(sq, sq_size, sq_size);
+			lv_obj_set_pos(sq, gap + col * (sq_size + gap), gap_y + row * (sq_size + gap_y));
+			lv_obj_set_style_bg_color(sq, lv_color_hex(colors[(row + col) % 12]), 0);
+			lv_obj_set_style_bg_opa(sq, LV_OPA_COVER, 0);
+			lv_obj_set_style_radius(sq, 8, 0);
+		}
+	}
+
+	LV_LOG_USER("Demo 4: Color grid");
+}
+
+/*-----------------------------------------------------
+ * Demo 5: 渐变背景 + 大文字标签
+ *-----------------------------------------------------*/
+static void create_demo_5(lv_obj_t * parent)
+{
+	lv_obj_set_style_bg_color(parent, lv_color_hex(0x0a0a0a), 0);
+	lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
+
+	/* 顶部渐变条 */
+	lv_obj_t * top_bar = lv_obj_create(parent);
+	lv_obj_set_size(top_bar, 1024, 100);
+	lv_obj_set_pos(top_bar, 0, 0);
+	lv_obj_set_style_bg_color(top_bar, lv_color_hex(0xFF4500), 0);
+	lv_obj_set_style_bg_opa(top_bar, LV_OPA_COVER, 0);
+
+	/* 底部渐变条 */
+	lv_obj_t * bottom_bar = lv_obj_create(parent);
+	lv_obj_set_size(bottom_bar, 1024, 100);
+	lv_obj_set_pos(bottom_bar, 0, 500);
+	lv_obj_set_style_bg_color(bottom_bar, lv_color_hex(0x00CED1), 0);
+	lv_obj_set_style_bg_opa(bottom_bar, LV_OPA_COVER, 0);
+
+	/* 中心白色圆形 */
+	lv_obj_t * center = lv_obj_create(parent);
+	lv_obj_set_size(center, 200, 200);
+	lv_obj_set_pos(center, (1024 - 200) / 2, (600 - 200) / 2);
+	lv_obj_set_style_bg_color(center, lv_color_hex(0xFFFFFF), 0);
+	lv_obj_set_style_bg_opa(center, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(center, 100, 0);
+
+	/* 左边青色矩形 */
+	lv_obj_t * left = lv_obj_create(parent);
+	lv_obj_set_size(left, 150, 200);
+	lv_obj_set_pos(left, 100, 200);
+	lv_obj_set_style_bg_color(left, lv_color_hex(0x00FFFF), 0);
+	lv_obj_set_style_bg_opa(left, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(left, 0, 0);
+
+	/* 右边粉红矩形 */
+	lv_obj_t * right = lv_obj_create(parent);
+	lv_obj_set_size(right, 150, 200);
+	lv_obj_set_pos(right, 1024 - 100 - 150, 200);
+	lv_obj_set_style_bg_color(right, lv_color_hex(0xFF69B4), 0);
+	lv_obj_set_style_bg_opa(right, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(right, 0, 0);
+
+	LV_LOG_USER("Demo 5: Gradient + shapes");
+}
+
+/*-----------------------------------------------------
+ * 切换演示画面
+ *-----------------------------------------------------*/
+static void switch_demo(uint8_t demo_num)
+{
+	/* 删除旧屏幕 */
+	if (demo_screen) {
+		lv_obj_del(demo_screen);
+		demo_screen = NULL;
+	}
+
+	/* 创建新屏幕 */
+	demo_screen = lv_obj_create(NULL);
+	lv_obj_set_size(demo_screen, 1024, 600);
+	lv_scr_load(demo_screen);
+
+	/* 根据demo编号创建内容 */
+	switch (demo_num) {
+		case 0: create_demo_1(demo_screen); break;
+		case 1: create_demo_2(demo_screen); break;
+		case 2: create_demo_3(demo_screen); break;
+		case 3: create_demo_4(demo_screen); break;
+		case 4: create_demo_5(demo_screen); break;
+		default: create_demo_1(demo_screen); break;
+	}
+
+	current_demo = demo_num;
+}
+
+/*-----------------------------------------------------
+ * 定时器回调: 每5秒切换一次演示
+ *-----------------------------------------------------*/
+static void demo_timer_cb(lv_timer_t * timer)
+{
+	(void)timer;
+	uint8_t next_demo = (current_demo + 1) % TOTAL_DEMOS;
+	debug_printf("[DEMO] Switching to demo %d/%d\r\n", next_demo + 1, TOTAL_DEMOS);
+	switch_demo(next_demo);
 }
 
 static void do_system_initial(void)
@@ -288,62 +542,15 @@ int main(int argc, char * argv[])
 	lv_port_disp_init();
 	debug_printf("[DISP] lv_port_disp_init() returned!\r\n");
 
-	/* 5. 创建screen和obj（先于lv_timer_handler调用） */
-	debug_printf("\r\n[UI] Creating screen and object...\r\n");
-	lv_obj_t * scr = lv_scr_act();
-	debug_printf("[UI] Active screen: %p\r\n", (void *)scr);
+	/* 5. 创建演示画面 */
+	debug_printf("\r\n[DEMO] Starting demo system (%d demos)...\r\n", TOTAL_DEMOS);
 
-	/* 设置屏幕背景色为黑色 */
-	lv_obj_set_style_bg_color(scr, lv_color_hex(0x000000), 0);
-	lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+	/* 启动第一个演示 */
+	switch_demo(0);
 
-	/* 创建4个彩色矩形，2x2网格布局，居中显示 */
-	/* 屏幕分辨率: 1024x600, 每个矩形: 280x200 */
-#define RECT_W 280
-#define RECT_H 200
-#define GAP_X  ((1024 - RECT_W * 2) / 2)   /* 232 */
-#define GAP_Y  ((600 - RECT_H * 2) / 2)    /* 100 */
-
-	/* 红色矩形 - 左上 */
-	lv_obj_t * rect1 = lv_obj_create(scr);
-	lv_obj_set_size(rect1, RECT_W, RECT_H);
-	lv_obj_set_pos(rect1, GAP_X, GAP_Y);
-	lv_obj_set_style_bg_color(rect1, lv_color_hex(0xFF0000), 0);
-	lv_obj_set_style_bg_opa(rect1, LV_OPA_COVER, 0);
-	lv_obj_set_style_radius(rect1, 0, 0);
-	debug_printf("[UI] Red rect at (%d, %d), size %dx%d\r\n", GAP_X, GAP_Y, RECT_W, RECT_H);
-
-	/* 绿色矩形 - 右上 */
-	lv_obj_t * rect2 = lv_obj_create(scr);
-	lv_obj_set_size(rect2, RECT_W, RECT_H);
-	lv_obj_set_pos(rect2, GAP_X + RECT_W, GAP_Y);
-	lv_obj_set_style_bg_color(rect2, lv_color_hex(0x00FF00), 0);
-	lv_obj_set_style_bg_opa(rect2, LV_OPA_COVER, 0);
-	lv_obj_set_style_radius(rect2, 0, 0);
-	debug_printf("[UI] Green rect at (%d, %d), size %dx%d\r\n", GAP_X + RECT_W, GAP_Y, RECT_W, RECT_H);
-
-	/* 蓝色矩形 - 左下 */
-	lv_obj_t * rect3 = lv_obj_create(scr);
-	lv_obj_set_size(rect3, RECT_W, RECT_H);
-	lv_obj_set_pos(rect3, GAP_X, GAP_Y + RECT_H);
-	lv_obj_set_style_bg_color(rect3, lv_color_hex(0x0000FF), 0);
-	lv_obj_set_style_bg_opa(rect3, LV_OPA_COVER, 0);
-	lv_obj_set_style_radius(rect3, 0, 0);
-	debug_printf("[UI] Blue rect at (%d, %d), size %dx%d\r\n", GAP_X, GAP_Y + RECT_H, RECT_W, RECT_H);
-
-	/* 黄色矩形 - 右下 */
-	lv_obj_t * rect4 = lv_obj_create(scr);
-	lv_obj_set_size(rect4, RECT_W, RECT_H);
-	lv_obj_set_pos(rect4, GAP_X + RECT_W, GAP_Y + RECT_H);
-	lv_obj_set_style_bg_color(rect4, lv_color_hex(0xFFFF00), 0);
-	lv_obj_set_style_bg_opa(rect4, LV_OPA_COVER, 0);
-	lv_obj_set_style_radius(rect4, 0, 0);
-	debug_printf("[UI] Yellow rect at (%d, %d), size %dx%d\r\n", GAP_X + RECT_W, GAP_Y + RECT_H, RECT_W, RECT_H);
-
-	/* 强制刷新布局 */
-	debug_printf("[UI] Calling lv_obj_update_layout on screen...\r\n");
-	lv_obj_update_layout(scr);
-	debug_printf("[UI] lv_obj_update_layout returned\r\n");
+	/* 创建定时器，每5秒切换一次演示 */
+	lv_timer_t * demo_timer = lv_timer_create(demo_timer_cb, 5000, NULL);
+	debug_printf("[DEMO] Demo timer created (period=5000ms)\r\n");
 
 	/* 6. 调用 lv_timer_handler (有了UI对象后) */
 	debug_printf("\r\n[TEST] Calling lv_timer_handler() to render UI...\r\n");
