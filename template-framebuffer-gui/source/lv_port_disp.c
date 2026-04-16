@@ -18,7 +18,7 @@ extern uint32_t get_system_time_ms(void);
  * 1 = 使用 32x32 FULL 快速验证（区分真实死锁 vs 全屏渲染过慢）
  * 0 = 使用面板全分辨率 FULL（原始配置）
  */
-#define LVGL_FAST_PROBE_MODE 1
+#define LVGL_FAST_PROBE_MODE 0
 
 #if LVGL_FAST_PROBE_MODE
 #define LVGL_HOR_RES  32

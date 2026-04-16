@@ -293,17 +293,52 @@ int main(int argc, char * argv[])
 	lv_obj_t * scr = lv_scr_act();
 	debug_printf("[UI] Active screen: %p\r\n", (void *)scr);
 
-	/* 创建一个完全扁平的 obj，无圆角无阴影 */
-	/* [DEBUG] 注释掉UI创建代码以测试是否是内存踩踏导致死锁
-	lv_obj_t * obj = lv_obj_create(scr);
-	lv_obj_set_size(obj, 20, 10);  // 32x32 快速测试模式下的小尺寸
-	lv_obj_set_pos(obj, 2, 2);     // 32x32 可见范围内
-	// 移除所有圆角和阴影
-	lv_obj_set_style_radius(obj, 0, 0);
-	lv_obj_set_style_shadow_width(obj, 0, 0);
-	lv_obj_set_style_border_width(obj, 0, 0);
-	debug_printf("[UI] Flat object created at (%d, %d)\r\n", 2, 2);
-	*/
+	/* 设置屏幕背景色为黑色 */
+	lv_obj_set_style_bg_color(scr, lv_color_hex(0x000000), 0);
+	lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+
+	/* 创建4个彩色矩形，2x2网格布局，居中显示 */
+	/* 屏幕分辨率: 1024x600, 每个矩形: 280x200 */
+#define RECT_W 280
+#define RECT_H 200
+#define GAP_X  ((1024 - RECT_W * 2) / 2)   /* 232 */
+#define GAP_Y  ((600 - RECT_H * 2) / 2)    /* 100 */
+
+	/* 红色矩形 - 左上 */
+	lv_obj_t * rect1 = lv_obj_create(scr);
+	lv_obj_set_size(rect1, RECT_W, RECT_H);
+	lv_obj_set_pos(rect1, GAP_X, GAP_Y);
+	lv_obj_set_style_bg_color(rect1, lv_color_hex(0xFF0000), 0);
+	lv_obj_set_style_bg_opa(rect1, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(rect1, 0, 0);
+	debug_printf("[UI] Red rect at (%d, %d), size %dx%d\r\n", GAP_X, GAP_Y, RECT_W, RECT_H);
+
+	/* 绿色矩形 - 右上 */
+	lv_obj_t * rect2 = lv_obj_create(scr);
+	lv_obj_set_size(rect2, RECT_W, RECT_H);
+	lv_obj_set_pos(rect2, GAP_X + RECT_W, GAP_Y);
+	lv_obj_set_style_bg_color(rect2, lv_color_hex(0x00FF00), 0);
+	lv_obj_set_style_bg_opa(rect2, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(rect2, 0, 0);
+	debug_printf("[UI] Green rect at (%d, %d), size %dx%d\r\n", GAP_X + RECT_W, GAP_Y, RECT_W, RECT_H);
+
+	/* 蓝色矩形 - 左下 */
+	lv_obj_t * rect3 = lv_obj_create(scr);
+	lv_obj_set_size(rect3, RECT_W, RECT_H);
+	lv_obj_set_pos(rect3, GAP_X, GAP_Y + RECT_H);
+	lv_obj_set_style_bg_color(rect3, lv_color_hex(0x0000FF), 0);
+	lv_obj_set_style_bg_opa(rect3, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(rect3, 0, 0);
+	debug_printf("[UI] Blue rect at (%d, %d), size %dx%d\r\n", GAP_X, GAP_Y + RECT_H, RECT_W, RECT_H);
+
+	/* 黄色矩形 - 右下 */
+	lv_obj_t * rect4 = lv_obj_create(scr);
+	lv_obj_set_size(rect4, RECT_W, RECT_H);
+	lv_obj_set_pos(rect4, GAP_X + RECT_W, GAP_Y + RECT_H);
+	lv_obj_set_style_bg_color(rect4, lv_color_hex(0xFFFF00), 0);
+	lv_obj_set_style_bg_opa(rect4, LV_OPA_COVER, 0);
+	lv_obj_set_style_radius(rect4, 0, 0);
+	debug_printf("[UI] Yellow rect at (%d, %d), size %dx%d\r\n", GAP_X + RECT_W, GAP_Y + RECT_H, RECT_W, RECT_H);
 
 	/* 强制刷新布局 */
 	debug_printf("[UI] Calling lv_obj_update_layout on screen...\r\n");
