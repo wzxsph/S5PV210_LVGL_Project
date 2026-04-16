@@ -144,11 +144,9 @@ mmu_init:
 mmu_fill_loop:
 	cmp	r1, #4096
 	beq	mmu_fill_loop_end
-	orr	r2, r1, r1, lsl #20     /* r2 = section_num | (section_num << 20) - but we need OR with 0xC0000412 */
-	/* The descriptor for strongly-ordered: base[31:20]|0xC0000412 */
-	/* Actually simpler: just use section_num shifted to position, OR with attrs */
 	mov	r2, r1, lsl #20
-	orr	r2, r2, #0xC0000412
+	ldr	r3, =0xC0000412
+	orr	r2, r2, r3
 	str	r2, [r0], #4
 	add	r1, r1, #1
 	b	mmu_fill_loop
@@ -163,7 +161,8 @@ mmu_sdram_loop:
 	cmp	r1, #0x400      /* Sections 0x200 through 0x3FF = 512 entries */
 	beq	mmu_sdram_done
 	mov	r2, r1, lsl #20
-	orr	r2, r2, #0xC0000C1E
+	ldr	r3, =0xC0000C1E
+	orr	r2, r2, r3
 	str	r2, [r0], #4
 	add	r1, r1, #1
 	b	mmu_sdram_loop
@@ -173,8 +172,10 @@ mmu_sdram_done:
 	 * Entry 0xD0: offset = 0xD0 * 4 = 0x340 */
 	ldr	r0, _mmu_table_start
 	add	r0, r0, #0x340
-	mov	r2, #0xD0, lsl #20
-	orr	r2, r2, #0xC0000C1E
+	mov	r2, #0xD0
+	mov	r2, r2, lsl #20
+	ldr	r3, =0xC0000C1E
+	orr	r2, r2, r3
 	str	r2, [r0]
 
 	/* Set TTBR0 (Translation Table Base Register 0) */

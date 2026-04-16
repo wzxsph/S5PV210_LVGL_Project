@@ -1,0 +1,7 @@
+[AS] source/startup/start.S
+source/startup/start.S: Assembler messages:
+source/startup/start.S:176: Error: constant expression expected -- `mov r2,#0xD0,lsl#20'
+source/startup/start.S:151: Error: invalid constant (c0000412) after fixup
+source/startup/start.S:166: Error: invalid constant (c0000c1e) after fixup
+source/startup/start.S:177: Error: invalid constant (c0000c1e) after fixup
+make: *** [.obj/source/startup/start.o] ´íÎó 1
