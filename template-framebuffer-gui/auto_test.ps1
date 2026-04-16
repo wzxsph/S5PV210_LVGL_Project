@@ -1,7 +1,7 @@
 param(
     [string]$SerialPort = "COM6",
     [int]$BaudRate = 115200,
-    [int]$Timeout = 30
+    [int]$Timeout = 180
 )
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
