@@ -201,6 +201,13 @@ X_NAME		:= $(patsubst %, $(X_OUT)/%, $(NAME))
 X_INCDIRS	:= $(patsubst %, -I %, $(INCDIRS))
 X_SRCDIRS	:= $(patsubst %, %, $(SRCDIRS))
 X_OBJDIRS	:= $(patsubst %, .obj/%, $(X_SRCDIRS))
+ifeq ($(HOSTOS),windows)
+X_MKDIRS	:= $(subst /,\,$(X_OBJDIRS)) $(subst /,\,$(X_OUT))
+else
+X_MKDIRS	:= $(X_OBJDIRS) $(X_OUT)
+endif
+EMPTY		:=
+SPACE		:= $(EMPTY) $(EMPTY)
 
 X_SFILES	:= $(foreach dir, $(X_SRCDIRS), $(wildcard $(dir)/*.S))
 X_CFILES	:= $(foreach dir, $(X_SRCDIRS), $(wildcard $(dir)/*.c))
@@ -223,7 +230,11 @@ VPATH		:= $(X_OBJDIRS)
 all : dirs $(X_NAME)
 
 dirs:
-	@$(MKDIR) $(X_OBJDIRS) $(X_OUT)
+ifeq ($(HOSTOS),windows)
+	@powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path @('$(subst $(SPACE),',' ,$(X_MKDIRS))') | Out-Null"
+else
+	@$(MKDIR) $(X_MKDIRS)
+endif
 
 $(X_NAME) : $(X_OBJS)
 	@echo [LD] Linking $@.elf
