@@ -7,6 +7,23 @@
 .equ 	MODE_MASK,		0x1f	/* system running in priviledged operating mode */
 .equ 	NO_INT,			0xc0
 
+.equ	MMU_SECT_SDRAM_START,	0x300
+.equ	MMU_SECT_SDRAM_END,		0x4ff
+.equ	MMU_SECT_FB_START,		0x3e0
+.equ	MMU_SECT_FB_END,		0x3e5
+.equ	MMU_SECT_MMIO_START,	0xe00
+.equ	MMU_SECT_MMIO_END,		0xfff
+
+.equ	UART2_UTRSTAT,			0xE2900810
+.equ	UART2_UTXH,				0xE2900820
+.equ	UART_UTRSTAT_TXE,		(1 << 2)
+
+/* First-level section attributes, kept aligned with the known-good S5PV210 style
+ * used in the reference code the project is following. */
+.equ	MMU_DESC_SDRAM_CACHED,	0x00000c1e	/* RW, cached/buffered section */
+.equ	MMU_DESC_FB_NOCACHE,	0x00000c12	/* RW, uncached section */
+.equ	MMU_DESC_MMIO_DEVICE,	0x00000c12	/* RW, uncached/device section */
+
 /*
  * exception vector table
  */
@@ -98,6 +115,15 @@ clear_bss:
 	mov r2, #0x00000000
 	bl	mem_clear
 
+	mov	r0, #'S'
+	bl	uart2_putc
+
+	/* build first-level page table and enable MMU/cache */
+	bl	mmu_init
+
+	mov	r0, #'M'
+	bl	uart2_putc
+
 	/* jump to main fuction */
 	mov r0, #0;
 	mov r1, #0;
@@ -138,6 +164,167 @@ init_stacks:
 	msr	cpsr_cxsf, r1
 	ldr	sp, _stack_srv_end
 	bic	sp, sp, #7		/* Enforce 8-byte alignment */
+	mov	pc, lr
+
+/*
+ * write one character to UART2 using the bootloader's current setup
+ *
+ * r0: ASCII character to send
+ */
+uart2_putc:
+	ldr	r1, =UART2_UTRSTAT
+1:
+	ldr	r2, [r1]
+	tst	r2, #UART_UTRSTAT_TXE
+	beq	1b
+	ldr	r1, =UART2_UTXH
+	strb	r0, [r1]
+	mov	pc, lr
+
+/*
+ * map a contiguous range of 1MB sections
+ *
+ * r0: L1 table base
+ * r1: start section index
+ * r2: end section index (inclusive)
+ * r3: section descriptor attributes
+ */
+map_sections:
+	add	r4, r0, r1, lsl #2
+1:
+	cmp	r1, r2
+	bgt	2f
+	mov	r5, r1, lsl #20
+	orr	r5, r5, r3
+	str	r5, [r4], #4
+	add	r1, r1, #1
+	b	1b
+2:
+	mov	pc, lr
+
+/*
+ * invalidate L1 data cache by set/way using CCSIDR
+ */
+invalidate_dcache_all:
+	mov	r0, #0
+	mcr	p15, 2, r0, c0, c0, 0		/* CSSELR: L1 data/unified cache */
+	isb
+
+	mrc	p15, 1, r1, c0, c0, 0		/* CCSIDR */
+	and	r2, r1, #7
+	add	r2, r2, #4				/* log2(line_len_bytes) */
+
+	ldr	r3, =0x3ff
+	and	r3, r3, r1, lsr #3		/* associativity - 1 */
+	clz	r4, r3					/* way shift */
+
+	ldr	r5, =0x7fff
+	and	r5, r5, r1, lsr #13		/* number of sets - 1 */
+3:
+	mov	r6, r3
+4:
+	mov	r7, r6, lsl r4
+	orr	r7, r7, r5, lsl r2
+	mcr	p15, 0, r7, c7, c6, 2		/* DCISW */
+	subs	r6, r6, #1
+	bpl	4b
+	subs	r5, r5, #1
+	bpl	3b
+
+	dsb
+	mov	pc, lr
+
+/*
+ * build a flat section page table, keeping SDRAM cached, framebuffer uncached
+ * and peripheral MMIO strongly ordered
+ */
+mmu_init:
+	mov	r0, #'0'
+	bl	uart2_putc
+
+	/* start from a known CP15 state in case U-Boot left caches enabled */
+	mrc	p15, 0, r0, c1, c0, 0
+	bic	r0, r0, #(1 << 0)		/* M */
+	bic	r0, r0, #(1 << 2)		/* C */
+	bic	r0, r0, #(1 << 11)		/* Z */
+	bic	r0, r0, #(1 << 12)		/* I */
+	bic	r0, r0, #(1 << 1)		/* A = 0, keep unaligned access enabled */
+	mcr	p15, 0, r0, c1, c0, 0
+	dsb
+	isb
+
+	/* clear the 16KB L1 table */
+	ldr	r4, =__mmu_table_start
+	ldr	r5, =__mmu_table_end
+	mov	r0, r4
+	mov	r1, r5
+	mov	r2, #0
+	bl	mem_clear
+
+	mov	r0, #'1'
+	bl	uart2_putc
+
+	/* 0x30000000 - 0x4fffffff: normal cached SDRAM */
+	mov	r0, r4
+	ldr	r1, =MMU_SECT_SDRAM_START
+	ldr	r2, =MMU_SECT_SDRAM_END
+	ldr	r3, =MMU_DESC_SDRAM_CACHED
+	bl	map_sections
+
+	/* 0x3e000000 - 0x3e5fffff: framebuffer window as non-cacheable normal memory */
+	mov	r0, r4
+	ldr	r1, =MMU_SECT_FB_START
+	ldr	r2, =MMU_SECT_FB_END
+	ldr	r3, =MMU_DESC_FB_NOCACHE
+	bl	map_sections
+
+	/* 0xe0000000 - 0xffffffff: peripheral registers as strongly ordered/device memory */
+	mov	r0, r4
+	ldr	r1, =MMU_SECT_MMIO_START
+	ldr	r2, =MMU_SECT_MMIO_END
+	ldr	r3, =MMU_DESC_MMIO_DEVICE
+	bl	map_sections
+
+	mov	r0, #'2'
+	bl	uart2_putc
+
+	dsb
+
+	/* TTBR0 only, short-descriptor format */
+	ldr	r0, =__mmu_table_start
+	mcr	p15, 0, r0, c2, c0, 0		/* TTBR0 */
+	mov	r0, #0
+	mcr	p15, 0, r0, c2, c0, 2		/* TTBCR = 0 */
+
+	ldr	r0, =0xffffffff
+	mcr	p15, 0, r0, c3, c0, 0		/* DACR: manager access */
+
+	mov	r0, #'3'
+	bl	uart2_putc
+
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c5, 0		/* invalidate I-cache */
+	mcr	p15, 0, r0, c7, c5, 6		/* invalidate branch predictor array */
+	mcr	p15, 0, r0, c8, c7, 0		/* invalidate unified TLB */
+	bl	invalidate_dcache_all
+
+	mov	r0, #'4'
+	bl	uart2_putc
+
+	/* enable MMU, D-cache, I-cache and branch prediction */
+	mrc	p15, 0, r0, c1, c0, 0
+	bic	r0, r0, #(1 << 1)		/* A = 0 */
+	orr	r0, r0, #(1 << 0)		/* M */
+	orr	r0, r0, #(1 << 2)		/* C */
+	orr	r0, r0, #(1 << 11)		/* Z */
+	orr	r0, r0, #(1 << 12)		/* I */
+	mcr	p15, 0, r0, c1, c0, 0
+	dsb
+	isb
+
+	mov	r0, #'5'
+	bl	uart2_putc
+
 	mov	pc, lr
 
 /*

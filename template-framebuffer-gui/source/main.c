@@ -30,6 +30,11 @@ static void switch_demo(uint8_t demo_num);
 #define DEBUG_UART_CH   2       /* 使用 UART2 进行调试输出 */
 #define DEBUG_BAUD      B115200
 
+extern unsigned char __mmu_table_start;
+extern unsigned char __mmu_table_end;
+extern unsigned char __fb_nocache_start;
+extern unsigned char __fb_nocache_end;
+
 static void debug_printf(const char * fmt, ...)
 {
 	va_list ap;
@@ -43,6 +48,45 @@ static void debug_printf(const char * fmt, ...)
 	if (len > 0) {
 		s5pv210_serial_write_string(DEBUG_UART_CH, buf);
 	}
+}
+
+static u32_t read_sctlr(void)
+{
+	u32_t value;
+
+	__asm__ __volatile__(
+		"mrc p15, 0, %0, c1, c0, 0"
+		: "=r" (value)
+		:
+		: "memory");
+
+	return value;
+}
+
+static u32_t read_ttbr0(void)
+{
+	u32_t value;
+
+	__asm__ __volatile__(
+		"mrc p15, 0, %0, c2, c0, 0"
+		: "=r" (value)
+		:
+		: "memory");
+
+	return value;
+}
+
+static u32_t read_dacr(void)
+{
+	u32_t value;
+
+	__asm__ __volatile__(
+		"mrc p15, 0, %0, c3, c0, 0"
+		: "=r" (value)
+		:
+		: "memory");
+
+	return value;
 }
 
 /* 调试探针函数（供 LVGL 内部调用） */
@@ -400,7 +444,7 @@ static void do_system_initial(void)
 
 	/* 注意：暂时禁用 Cache 和 MMU，因为没有正确的翻译表会导致显示异常 */
 	/* TODO: 后续需要正确配置 MMU 翻译表后才能启用缓存以提升渲染性能 */
-	debug_printf("[INIT] Cache and MMU disabled for display correctness\r\n");
+	debug_printf("[INIT] Cache and MMU enabled for LVGL performance\r\n");
 
 	s5pv210_irq_initial();
 	debug_printf("[INIT] s5pv210_irq_initial() done\r\n");
@@ -417,9 +461,21 @@ static void do_system_initial(void)
 	/* 配置 UART2 用于调试输出（如果尚未配置） */
 	s5pv210_serial_setup(DEBUG_UART_CH, DEBUG_BAUD, DATA_BITS_8, PARITY_NONE, STOP_BITS_1);
 	debug_printf("[INIT] UART2 configured for debug @ 115200 baud\r\n");
+	debug_printf("[INIT] MMU/cache enabled by start.S\r\n");
+	debug_printf("[INIT]   SCTLR=0x%08X TTBR0=0x%08X DACR=0x%08X\r\n",
+	             read_sctlr(), read_ttbr0(), read_dacr());
+	debug_printf("[INIT]   MMU table: 0x%08X - 0x%08X\r\n",
+	             (unsigned int)&__mmu_table_start, (unsigned int)&__mmu_table_end);
+	debug_printf("[INIT]   FB NC window: 0x%08X - 0x%08X\r\n",
+	             (unsigned int)&__fb_nocache_start, (unsigned int)&__fb_nocache_end);
 
 	s5pv210_fb_initial();
 	debug_printf("[INIT] s5pv210_fb_initial() done - LCD should be ON now\r\n");
+	{
+		struct surface_t * surface = s5pv210_screen_surface();
+		debug_printf("[INIT] Framebuffer base: 0x%08X\r\n",
+		             surface ? (unsigned int)surface->pixels : 0);
+	}
 
 	led_initial();
 	beep_initial();

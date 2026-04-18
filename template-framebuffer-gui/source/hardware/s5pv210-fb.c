@@ -746,7 +746,8 @@ static void fb_backlight(struct fb_t * fb, u8_t brightness)
 /*
  * lcd module - EK070TN93
  */
-static u8_t vram[2][1024 * 600 * 32 / 8] __attribute__((aligned(4)));
+static u8_t vram[2][1024 * 600 * 32 / 8]
+	__attribute__((section(".fb_nocache"), aligned(64)));
 
 static struct s5pv210fb_lcd vs070cxn_lcd = {
 	.width				= 1024,
@@ -807,6 +808,9 @@ void s5pv210_fb_initial(void)
 
 	if( (lcd->bits_per_pixel != 16) && (lcd->bits_per_pixel != 24) && (lcd->bits_per_pixel != 32) )
 		return;
+
+	/* .fb_nocache is outside the cleared .bss range, so zero it explicitly. */
+	memset(vram, 0, sizeof(vram));
 
 	s5pv210_fb.lcd = lcd;
 	s5pv210_fb.surface.info.bits_per_pixel = lcd->bits_per_pixel;

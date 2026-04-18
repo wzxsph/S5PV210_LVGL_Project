@@ -1,0 +1,23 @@
+﻿================================================================================
+TEST REPORT - 20260418_133017
+================================================================================
+Serial Port : COM6
+Baud Rate   : 115200
+Status      : FAIL
+Start Time  : 2026-04-18 13:30:17
+Duration    : 197.8s
+================================================================================
+Flush Count : -1
+Missing     : [INIT] MMU/cache enabled by start.S; [INIT] Framebuffer base:; [DISP_INIT] ======== Display Init COMPLETE =======; [TEST] lv_timer_handler() RETURNED!; [DEMO] Switched to demo 2/5
+Failures    : lv_timer_handler returned without a positive flush count
+Validation  : FAIL
+================================================================================
+
+SERIAL OUTPUT:
+--------------------------------------------------------------------------------
+go 0x30000000
+## Starting application at 0x30000000 ...
+
+
+--------------------------------------------------------------------------------
+END OF REPORT

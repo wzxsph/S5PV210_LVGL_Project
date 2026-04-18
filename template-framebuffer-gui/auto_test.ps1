@@ -6,6 +6,20 @@ param(
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $tftpScript = Join-Path $scriptDir "tftp_server.py"
+$reportsDir = Join-Path $scriptDir "test_reports"
+
+# Create reports directory if not exists
+if (-not (Test-Path $reportsDir)) {
+    New-Item -ItemType Directory -Path $reportsDir | Out-Null
+}
+
+# Generate timestamp and report file
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$reportFile = Join-Path $reportsDir "$timestamp.txt"
+$indexFile = Join-Path $reportsDir "index.txt"
+
+# Start total test timer
+$totalTestStart = Get-Date
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  S5PV210 LVGL Auto Test" -ForegroundColor Cyan
@@ -71,6 +85,7 @@ $buffer = ""  # Reset buffer AFTER sending tftp command
 Write-Host "[2] Waiting for TFTP to complete..." -ForegroundColor Yellow
 $tftpDone = $false
 $tftpFailed = $false
+$tftpLoading = $false
 $tftpStartTime = Get-Date
 $timeoutSeconds = 120
 $maxWaitSeconds = $timeoutSeconds
@@ -134,14 +149,50 @@ while ($true) {
 if (-not $tftpDone) {
     Write-Host ""
     Write-Host "[ABORT] TFTP transfer did not complete. Aborting test (go command NOT sent)." -ForegroundColor Red
-    
+
     $serial.Close()
-    
+
     if ($tftpProcess -and !$tftpProcess.HasExited) {
         Stop-Process -Id $tftpProcess.Id -Force -ErrorAction SilentlyContinue
         Write-Host "[INFO] TFTP server stopped" -ForegroundColor Yellow
     }
-    
+
+    # Save abort report
+    $totalTestEnd = Get-Date
+    $totalDuration = $totalTestEnd - $totalTestStart
+    $abortReport = @"
+================================================================================
+TEST REPORT - $timestamp
+================================================================================
+Serial Port : $SerialPort
+Baud Rate   : $BaudRate
+Status      : ABORT
+Start Time  : $($totalTestStart.ToString("yyyy-MM-dd HH:mm:ss"))
+Duration    : $([math]::Round($totalDuration.TotalSeconds, 1))s
+Reason      : TFTP transfer failed
+================================================================================
+
+SERIAL OUTPUT:
+--------------------------------------------------------------------------------
+$buffer
+
+--------------------------------------------------------------------------------
+END OF REPORT
+"@
+    $abortReport | Out-File -FilePath $reportFile -Encoding UTF8
+    Write-Host "[OK] Report saved: $reportFile" -ForegroundColor Green
+
+    # Update index
+    $indexEntry = "$timestamp | ABORT | $([math]::Round($totalDuration.TotalSeconds, 1))s | $SerialPort"
+    if (Test-Path $indexFile) {
+        $indexContent = Get-Content $indexFile -Raw
+        $newIndex = "$indexEntry`n$indexContent"
+    } else {
+        $newIndex = $indexEntry
+    }
+    $newIndex | Out-File -FilePath $indexFile -Encoding UTF8
+    Write-Host "[OK] Index updated: $indexFile" -ForegroundColor Green
+
     exit 1
 }
 
@@ -181,6 +232,115 @@ if ($tftpProcess -and !$tftpProcess.HasExited) {
     Write-Host "[OK] TFTP server stopped" -ForegroundColor Green
 }
 
+$totalTestEnd = Get-Date
+$totalDuration = $totalTestEnd - $totalTestStart
+
 Write-Host ""
 Write-Host "----------------------------------------" -ForegroundColor Gray
 Write-Host "[DONE] Test complete" -ForegroundColor Cyan
+
+# Validate runtime output, not just TFTP success
+$requiredMarkers = @(
+    "[INIT] MMU/cache enabled by start.S",
+    "[INIT] Framebuffer base:",
+    "[DISP_INIT] ======== Display Init COMPLETE =======",
+    "[TEST] lv_timer_handler() RETURNED!",
+    "[DEMO] Switched to demo 2/5"
+)
+
+$failurePatterns = @(
+    "===== DATA ABORT =====",
+    "===== UNDEFINED INSTRUCTION =====",
+    "FATAL:",
+    "[FLUSH]   ERROR:"
+)
+
+$missingMarkers = @()
+foreach ($marker in $requiredMarkers) {
+    if (-not $outputBuffer.Contains($marker)) {
+        $missingMarkers += $marker
+    }
+}
+
+$runtimeFailures = @()
+foreach ($pattern in $failurePatterns) {
+    if ($outputBuffer.Contains($pattern)) {
+        $runtimeFailures += $pattern
+    }
+}
+
+$flushCount = -1
+$flushMatch = [regex]::Match($outputBuffer, "lv_timer_handler\(\) RETURNED!.*flush=(\d+)")
+if ($flushMatch.Success) {
+    $flushCount = [int]$flushMatch.Groups[1].Value
+}
+
+if ($flushCount -le 0) {
+    $runtimeFailures += "lv_timer_handler returned without a positive flush count"
+}
+
+$validationSummary = @()
+$validationSummary += "Flush Count : $flushCount"
+if ($missingMarkers.Count -gt 0) {
+    $validationSummary += "Missing     : " + ($missingMarkers -join "; ")
+}
+if ($runtimeFailures.Count -gt 0) {
+    $validationSummary += "Failures    : " + ($runtimeFailures -join "; ")
+}
+if ($missingMarkers.Count -eq 0 -and $runtimeFailures.Count -eq 0) {
+    $validationSummary += "Validation  : PASS"
+    Write-Host "[CHECK] Runtime validation passed" -ForegroundColor Green
+} else {
+    $validationSummary += "Validation  : FAIL"
+    Write-Host "[CHECK] Runtime validation failed" -ForegroundColor Red
+}
+
+# Determine test status
+if (-not $tftpDone) {
+    if ($tftpFailed) {
+        $testStatus = "FAIL"
+    } else {
+        $testStatus = "ABORT"
+    }
+} elseif ($missingMarkers.Count -eq 0 -and $runtimeFailures.Count -eq 0) {
+    $testStatus = "PASS"
+} else {
+    $testStatus = "FAIL"
+}
+
+# Build report content
+$reportContent = @"
+================================================================================
+TEST REPORT - $timestamp
+================================================================================
+Serial Port : $SerialPort
+Baud Rate   : $BaudRate
+Status      : $testStatus
+Start Time  : $($totalTestStart.ToString("yyyy-MM-dd HH:mm:ss"))
+Duration    : $([math]::Round($totalDuration.TotalSeconds, 1))s
+================================================================================
+$($validationSummary -join "`r`n")
+================================================================================
+
+SERIAL OUTPUT:
+--------------------------------------------------------------------------------
+$outputBuffer
+
+--------------------------------------------------------------------------------
+END OF REPORT
+"@
+
+# Save report to file
+$reportContent | Out-File -FilePath $reportFile -Encoding UTF8
+Write-Host "[OK] Report saved: $reportFile" -ForegroundColor Green
+
+# Update index file
+$indexEntry = "$timestamp | $testStatus | $([math]::Round($totalDuration.TotalSeconds, 1))s | $SerialPort"
+if (Test-Path $indexFile) {
+    $indexContent = Get-Content $indexFile -Raw
+    $newIndex = "$indexEntry`n$indexContent"
+} else {
+    $newIndex = $indexEntry
+}
+$newIndex | Out-File -FilePath $indexFile -Encoding UTF8
+Write-Host "[OK] Index updated: $indexFile" -ForegroundColor Green
