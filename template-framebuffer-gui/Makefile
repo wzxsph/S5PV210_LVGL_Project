@@ -201,13 +201,15 @@ X_NAME		:= $(patsubst %, $(X_OUT)/%, $(NAME))
 X_INCDIRS	:= $(patsubst %, -I %, $(INCDIRS))
 X_SRCDIRS	:= $(patsubst %, %, $(SRCDIRS))
 X_OBJDIRS	:= $(patsubst %, .obj/%, $(X_SRCDIRS))
+EMPTY		:=
+SPACE		:= $(EMPTY) $(EMPTY)
+COMMA		:= ,
 ifeq ($(HOSTOS),windows)
 X_MKDIRS	:= $(subst /,\,$(X_OBJDIRS)) $(subst /,\,$(X_OUT))
+X_MKDIRS_PS	:= $(subst $(SPACE),$(COMMA),$(foreach d,$(X_MKDIRS),'$(d)'))
 else
 X_MKDIRS	:= $(X_OBJDIRS) $(X_OUT)
 endif
-EMPTY		:=
-SPACE		:= $(EMPTY) $(EMPTY)
 
 X_SFILES	:= $(foreach dir, $(X_SRCDIRS), $(wildcard $(dir)/*.S))
 X_CFILES	:= $(foreach dir, $(X_SRCDIRS), $(wildcard $(dir)/*.c))
@@ -231,7 +233,7 @@ all : dirs $(X_NAME)
 
 dirs:
 ifeq ($(HOSTOS),windows)
-	@powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path @('$(subst $(SPACE),',' ,$(X_MKDIRS))') | Out-Null"
+	@powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path @($(X_MKDIRS_PS)) | Out-Null"
 else
 	@$(MKDIR) $(X_MKDIRS)
 endif
