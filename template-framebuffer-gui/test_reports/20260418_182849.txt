@@ -1,0 +1,73 @@
+﻿================================================================================
+TEST REPORT - 20260418_182849
+================================================================================
+Serial Port : COM11
+Baud Rate   : 115200
+Status      : FAIL
+Start Time  : 2026-04-18 18:28:49
+Duration    : 197.4s
+================================================================================
+Flush Count : -1
+Missing     : [TEST] lv_timer_handler() RETURNED!; [DEMO] Switched to demo 2/5
+Failures    : lv_timer_handler returned without a positive flush count
+Validation  : FAIL
+================================================================================
+
+SERIAL OUTPUT:
+--------------------------------------------------------------------------------
+go 0x30000000
+## Starting application at 0x30000000 ...
+
+============================================
+  S5PV210 LVGL v9 Application Starting...
+  Build: Apr 18 2026 18:26:36
+============================================
+[INIT] Starting system initialization...
+[INIT] malloc_init() done
+[INIT] s5pv210_clk_initial() done
+[INIT] Cache and MMU enabled for LVGL performance
+[INIT] s5pv210_irq_initial() done
+[INIT] s5pv210_tick_initial() done
+[INIT] s5pv210_tick_delay_initial() done
+[INIT] s5pv210_serial_initial() done
+[INIT] UART2 configured for debug @ 115200 baud
+[INIT] MMU/cache enabled by start.S
+[INIT]   SCTLR=0x00c5187d TTBR0=0x30510000 DACR=0xffffffff
+[INIT]   MMU table: 0x30510000 - 0x30514000
+[INIT]   FB NC window: 0x3e000000 - 0x3e600000
+[INIT] s5pv210_fb_initial() done - LCD should be ON now
+[INIT] Framebuffer base: 0x3e000000
+[INIT] System initialization COMPLETE!
+[INIT] ============================================
+
+[LVGL] Calling lv_init()...
+[LVGL] lv_init() SUCCESS!
+[LVGL] Registering log callback...
+[LVGL] Log callback registered
+[LVGL] Registering tick callback (jiffies->ms)...
+[LVGL] Tick callback registered. Current time: 490 ms
+[LVGL] Memory status:
+[LVGL]   Total: 4192128 bytes
+[LVGL]   Free: 4190012 bytes
+[LVGL]   Used: 2116 bytes (1%)
+
+[DISP] Calling lv_port_disp_init()...
+
+[DISP_INIT] ======== Display Driver Initialization =======
+[DISP_INIT] Panel Resolution: 1024x600
+[DISP_INIT] Render mode: DIRECT (double-buffer, zero-copy)
+[DISP_INIT] Display created
+[DISP_INIT] DIRECT buffers: buf1=0x3e000000 buf2=0x3e258000 (2457600 bytes each)
+[DISP_INIT] Flush callback registered
+[DISP_INIT] ======== Display Init COMPLETE =======
+
+[DISP] lv_port_disp_init() returned!
+[INDEV] Calling lv_port_indev_init()...
+[INDEV] lv_port_indev_init() done
+
+[DEMO] Starting lv_demo_widgets()...
+[DEMO] lv_demo_widgets() created
+
+
+--------------------------------------------------------------------------------
+END OF REPORT

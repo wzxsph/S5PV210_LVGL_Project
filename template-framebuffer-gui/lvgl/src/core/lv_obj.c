@@ -748,29 +748,19 @@ static void lv_obj_draw(lv_event_t * e)
         info->res = LV_COVER_RES_COVER;
     }
     else if(code == LV_EVENT_DRAW_MAIN) {
-        LV_LOG_USER("PROBE_ATOMIC: 1. Entering lv_obj_draw LV_EVENT_DRAW_MAIN");
         lv_layer_t * layer = lv_event_get_layer(e);
-        LV_LOG_USER("PROBE_ATOMIC: 1b. lv_event_get_layer returned layer=%p", (void *)layer);
 
         lv_draw_rect_dsc_t draw_dsc;
         lv_draw_rect_dsc_init(&draw_dsc);
-        LV_LOG_USER("PROBE_ATOMIC: 1c. lv_draw_rect_dsc_init done");
         draw_dsc.base.layer = layer;
 
-        LV_LOG_USER("PROBE_ATOMIC: 1d. Calling lv_obj_get_style_transform_width...");
         int32_t w = lv_obj_get_style_transform_width(obj, LV_PART_MAIN);
-        LV_LOG_USER("PROBE_ATOMIC: 1e. lv_obj_get_style_transform_width returned w=%d", (int)w);
         int32_t h = lv_obj_get_style_transform_height(obj, LV_PART_MAIN);
-        LV_LOG_USER("PROBE_ATOMIC: 1f. lv_obj_get_style_transform_height returned h=%d", (int)h);
         lv_area_t coords;
         lv_area_copy(&coords, &obj->coords);
-        LV_LOG_USER("PROBE_ATOMIC: 1g. lv_area_copy done, coords=%d,%d-%d,%d", coords.x1, coords.y1, coords.x2, coords.y2);
         lv_area_increase(&coords, w, h);
-        LV_LOG_USER("PROBE_ATOMIC: 1h. lv_area_increase done");
 
-        LV_LOG_USER("PROBE_ATOMIC: 1i. Calling lv_obj_get_style_blur_backdrop...");
         bool backdrop_blur = lv_obj_get_style_blur_backdrop(obj, LV_PART_MAIN);
-        LV_LOG_USER("PROBE_ATOMIC: 1j. lv_obj_get_style_blur_backdrop returned=%d", backdrop_blur);
         if(backdrop_blur) {
             lv_draw_blur_dsc_t blur_dsc;
             lv_draw_blur_dsc_init(&blur_dsc);
@@ -780,16 +770,12 @@ static void lv_obj_draw(lv_event_t * e)
             lv_draw_blur(layer, &blur_dsc, &coords);
         }
 
-        LV_LOG_USER("PROBE_ATOMIC: 2. About to call lv_obj_init_draw_rect_dsc...");
         lv_obj_init_draw_rect_dsc(obj, LV_PART_MAIN, &draw_dsc);
-        LV_LOG_USER("PROBE_ATOMIC: 3. Style & dsc initialized");
         if(lv_obj_get_style_border_post(obj, LV_PART_MAIN)) {
             draw_dsc.border_post = 1;
         }
 
-        LV_LOG_USER("PROBE_ATOMIC: 4. About to call lv_draw_rect");
         lv_draw_rect(layer, &draw_dsc, &coords);
-        LV_LOG_USER("PROBE_ATOMIC: 5. lv_draw_rect returned!");
     }
     else if(code == LV_EVENT_DRAW_MAIN_END) {
         /*Draw the non backdrop blur when the main content is rendered the the children are not yet */

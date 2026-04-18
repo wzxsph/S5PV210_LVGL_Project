@@ -1,0 +1,111 @@
+﻿================================================================================
+TEST REPORT - 20260418_190146
+================================================================================
+Serial Port : COM11
+Baud Rate   : 115200
+Status      : FAIL
+Start Time  : 2026-04-18 19:01:46
+Duration    : 205.4s
+================================================================================
+Flush Count : -1
+Missing     : [TEST] lv_timer_handler() RETURNED!; [DEMO] Switched to demo 2/5
+Failures    : lv_timer_handler returned without a positive flush count
+Validation  : FAIL
+================================================================================
+
+SERIAL OUTPUT:
+--------------------------------------------------------------------------------
+go 0x30000000
+## Starting application at 0x30000000 ...
+
+============================================
+  S5PV210 LVGL v9 Application Starting...
+  Build: Apr 18 2026 18:26:36
+============================================
+[INIT] Starting system initialization...
+[INIT] malloc_init() done
+[INIT] s5pv210_clk_initial() done
+[INIT] Cache and MMU enabled for LVGL performance
+[INIT] s5pv210_irq_initial() done
+[INIT] s5pv210_tick_initial() done
+[INIT] s5pv210_tick_delay_initial() done
+[INIT] s5pv210_serial_initial() done
+[INIT] UART2 configured for debug @ 115200 baud
+[INIT] MMU/cache enabled by start.S
+[INIT]   SCTLR=0x00c5187d TTBR0=0x30510000 DACR=0xffffffff
+[INIT]   MMU table: 0x30510000 - 0x30514000
+[INIT]   FB NC window: 0x3e000000 - 0x3e600000
+[INIT] s5pv210_fb_initial() done - LCD should be ON now
+[INIT] Framebuffer base: 0x3e000000
+[INIT] System initialization COMPLETE!
+[INIT] ============================================
+
+[LVGL] Calling lv_init()...
+[LVGL] lv_init() SUCCESS!
+[LVGL] Registering log callback...
+[LVGL] Log callback registered
+[LVGL] Registering tick callback (jiffies->ms)...
+[LVGL] Tick callback registered. Current time: 490 ms
+[LVGL] Memory status:
+[LVGL]   Total: 4192128 bytes
+[LVGL]   Free: 4190012 bytes
+[LVGL]   Used: 2116 bytes (1%)
+
+[DISP] Calling lv_port_disp_init()...
+
+[DISP_INIT] ======== Display Driver Initialization =======
+[DISP_INIT] Panel Resolution: 1024x600
+[DISP_INIT] Render mode: DIRECT (double-buffer, zero-copy)
+[DISP_INIT] Display created
+[DISP_INIT] DIRECT buffers: buf1=0x3e000000 buf2=0x3e258000 (2457600 bytes each)
+[DISP_INIT] Flush callback registered
+[DISP_INIT] ======== Display Init COMPLETE =======
+
+[DISP] lv_port_disp_init() returned!
+[INDEV] Calling lv_port_indev_init()...
+[INDEV] lv_port_indev_init() done
+
+[DEMO] Starting lv_demo_widgets()...
+[DEMO] lv_demo_widgets() created
+[DEMO] First render: 840 ms, flush=1
+
+[LOOP] Entering main loop...
+============================================
+
+[LOOP] tick=5070 loops=9 flush=19
+[LOOP] tick=10430 loops=23 flush=51
+[LOOP] tick=15760 loops=37 flush=79
+[LOOP] tick=21080 loops=51 flush=107
+[LOOP] tick=26400 loops=65 flush=135
+[LOOP] tick=31720 loops=79 flush=163
+[LOOP] tick=37060 loops=93 flush=193
+[LOOP] tick=42380 loops=107 flush=221
+[LOOP] tick=47700 loops=121 flush=249
+[LOOP] tick=53020 loops=135 flush=277
+[LOOP] tick=58340 loops=149 flush=305
+[LOOP] tick=63660 loops=163 flush=333
+[LOOP] tick=68980 loops=177 flush=361
+[LOOP] tick=74300 loops=191 flush=389
+[LOOP] tick=79620 loops=205 flush=417
+[LOOP] tick=84940 loops=219 flush=445
+[LOOP] tick=90260 loops=233 flush=473
+[LOOP] tick=95580 loops=247 flush=501
+[LOOP] tick=100900 loops=261 flush=529
+[LOOP] tick=106220 loops=275 flush=557
+[LOOP] tick=111540 loops=289 flush=585
+[LOOP] tick=116860 loops=303 flush=613
+[LOOP] tick=122190 loops=317 flush=641
+[LOOP] tick=127510 loops=331 flush=669
+[LOOP] tick=132830 loops=345 flush=697
+[LOOP] tick=138150 loops=359 flush=725
+[LOOP] tick=143470 loops=373 flush=753
+[LOOP] tick=148800 loops=387 flush=781
+[LOOP] tick=154130 loops=401 flush=809
+[LOOP] tick=159450 loops=415 flush=837
+[LOOP] tick=164770 loops=429 flush=865
+[LOOP] tick=170090 loops=443 flush=893
+[LOOP] tick=175410 loops=457 flush=921
+
+
+--------------------------------------------------------------------------------
+END OF REPORT

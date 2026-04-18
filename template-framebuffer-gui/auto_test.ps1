@@ -1,5 +1,5 @@
 param(
-    [string]$SerialPort = "COM6",
+    [string]$SerialPort = "COM11",
     [int]$BaudRate = 115200,
     [int]$Timeout = 180
 )

@@ -1,0 +1,23 @@
+﻿================================================================================
+TEST REPORT - 20260418_200825
+================================================================================
+Serial Port : COM11
+Baud Rate   : 115200
+Status      : ABORT
+Start Time  : 2026-04-18 20:08:25
+Duration    : 64.5s
+Reason      : TFTP transfer failed
+================================================================================
+
+SERIAL OUTPUT:
+--------------------------------------------------------------------------------
+operating at 100M full duplex mode
+TFTP from server 192.168.1.102; our IP address is 192.168.1.100
+Filename 'template-framebuffer-gui.bin'.
+Load address: 0x30000000
+Loading: *T T T T T T T T T T 
+Retry count exceeded; starting again
+
+
+--------------------------------------------------------------------------------
+END OF REPORT

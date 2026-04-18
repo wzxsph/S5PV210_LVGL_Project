@@ -13,6 +13,7 @@ struct surface_t * s5pv210_screen_surface(void);
 void s5pv210_screen_swap(void);
 void s5pv210_screen_flush(void);
 void s5pv210_screen_backlight(u8_t brightness);
+void s5pv210_screen_wait_vsync(void);
 
 #ifdef __cplusplus
 }

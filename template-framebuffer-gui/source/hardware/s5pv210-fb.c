@@ -33,7 +33,11 @@
 #include <s5pv210/reg-lcd.h>
 #include <s5pv210-clk.h>
 #include <s5pv210-tick-delay.h>
+#include <s5pv210-irq.h>
 #include <s5pv210-fb.h>
+
+/* VSYNC (Frame-End) interrupt flag — set by ISR, cleared by wait */
+static volatile u32_t vsync_flag = 0;
 
 enum s5pv210fb_output
 {
@@ -716,6 +720,55 @@ static void fb_init(struct fb_t * fb)
 	mdelay(100);
 }
 
+/*
+ * VSYNC (Frame-End) interrupt handler.
+ * VIDINTCON0[12]: FIMD issues IRQ at frame end (VSYNC).
+ * VIDINTCON1[1]: Write 1 to clear frame-end pending bit.
+ */
+static void fb_vsync_isr(void * data)
+{
+	(void)data;
+
+	/* Clear frame-end interrupt pending (write-1-to-clear) */
+	u32_t val = readl(S5PV210_VIDINTCON1);
+	writel(S5PV210_VIDINTCON1, val | (1 << 1));
+
+	vsync_flag = 1;
+}
+
+/*
+ * Enable VSYNC (frame-end) interrupt on FIMD.
+ * Called once during s5pv210_fb_initial().
+ */
+static void fb_vsync_init(void)
+{
+	u32_t val;
+
+	/* VIDINTCON0:
+	 *  [0]  = 1  : Video Interrupt Enable
+	 *  [12] = 1  : FIFO Interrupt disable (we don't need FIFO)
+	 *  [7]  = 0  : Frame interrupt type = VSYNC (frame start)
+	 *   Actually for S5PV210:
+	 *   [12:11] INT_FRAME_SEL = 00 → VSYNC, 01 → BACK_PORCH, 10 → ACTIVE, 11 → FRONT_PORCH
+	 *   [0]     INTEN = 1
+	 *   [1]     INTFRMEN = 1  (Frame interrupt enable)
+	 *   We want interrupt at BACK_PORCH start (= frame display done = VSYNC equivalent):
+	 *   [12:11] = 01 → back porch
+	 */
+	val = readl(S5PV210_VIDINTCON0);
+	val &= ~((3 << 11) | (1 << 1) | (1 << 0));  /* clear relevant bits */
+	val |= (1 << 11);   /* INT_FRAME_SEL = 01 (back porch = after frame end) */
+	val |= (1 << 1);    /* INTFRMEN = 1 (enable frame interrupt) */
+	val |= (1 << 0);    /* INTEN = 1 (global video interrupt enable) */
+	writel(S5PV210_VIDINTCON0, val);
+
+	/* Clear any pending interrupts */
+	writel(S5PV210_VIDINTCON1, readl(S5PV210_VIDINTCON1) | 0x07);
+
+	/* Register IRQ handler — LCD1 = IRQ 65 (FIMD frame interrupt) */
+	request_irq("LCD1", fb_vsync_isr, NULL);
+}
+
 static void fb_swap(struct fb_t * fb)
 {
 	struct s5pv210fb_lcd * lcd = (struct s5pv210fb_lcd *)(fb->lcd);
@@ -841,6 +894,9 @@ void s5pv210_fb_initial(void)
 
 	fb_init(&s5pv210_fb);
 
+	/* Enable VSYNC interrupt after FIMD is fully initialized */
+	fb_vsync_init();
+
 	if(lcd->backlight)
 		lcd->backlight(255);
 }
@@ -863,4 +919,29 @@ void s5pv210_screen_flush(void)
 void s5pv210_screen_backlight(u8_t brightness)
 {
 	fb_backlight(&s5pv210_fb, brightness);
+}
+
+void s5pv210_screen_wait_vsync(void)
+{
+	/*
+	 * Poll VIDINTCON1 for frame-end event.
+	 *
+	 * The FIMD sets VIDINTCON1[1] (INT_FRAME pending) on back-porch entry
+	 * every frame (~16.7ms at 60Hz), regardless of VIC/IRQ routing.
+	 * This polling approach is reliable even if the interrupt never
+	 * reaches the CPU (LCD1 IRQ misconfigured, VIC issue, etc.).
+	 *
+	 * Timeout: 2 jiffies = 20ms (> one 60Hz frame period of 16.7ms).
+	 */
+	extern volatile u64_t jiffies;
+	u64_t deadline = jiffies + 2;   /* 20ms timeout */
+
+	/* Clear frame interrupt pending bit (write-1-to-clear) */
+	writel(S5PV210_VIDINTCON1, readl(S5PV210_VIDINTCON1) | (1 << 1));
+
+	/* Poll until FIMD signals frame-end (bit 1 set) or timeout */
+	while (!(readl(S5PV210_VIDINTCON1) & (1 << 1))) {
+		if (jiffies >= deadline)
+			break;
+	}
 }

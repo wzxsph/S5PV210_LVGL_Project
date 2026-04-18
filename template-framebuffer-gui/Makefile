@@ -30,9 +30,9 @@ endif
 # Load variables of flag.Makefile
 #
 ASFLAGS		:= -g -ggdb -Wall -O3
-CFLAGS		:= -g -ggdb -Wall -O3 -Wno-unused-function -Wno-unused-variable -Wno-missing-field-initializers
+CFLAGS		:= -g -ggdb -Wall -O3 -ffunction-sections -fdata-sections -fno-common -Wno-unused-function -Wno-unused-variable -Wno-missing-field-initializers
 CXXFLAGS	:= -g -ggdb -Wall -O3
-LDFLAGS		:= -T link.ld -nostdlib -static
+LDFLAGS		:= -T link.ld -nostdlib -static -Wl,--gc-sections
 ARFLAGS		:= -rcs
 OCFLAGS		:= -v -O binary
 ODFLAGS		:=
@@ -66,10 +66,10 @@ SRCDIRS		+= source \
 			   source/graphic/maps/software
 
 #
-# Add external library
+# Legacy GUI library (unused by LVGL, kept for reference)
 #
 INCDIRS		+= source/gui
-SRCDIRS		+= source/gui
+#SRCDIRS	+= source/gui
 
 #
 # LVGL include paths
@@ -85,8 +85,9 @@ INCDIRS		+= . \
 #   - GPU backends: vg_lite, dma2d, opengles, sdl, nema_gfx, nxp, renesas, espressif
 #   - Image/video codecs: ffmpeg, freetype, gif, libjpeg_turbo, libpng, libwebp,
 #                        lodepng, lz4, rlottie, svg, thorvg, tiny_ttf, tjpgd, bmp, bin_decoder, barcode, qrcode, rle, fsdrv
-#   - Themes: default, mono, simple
-#   - Debug: debugging, monkey, sysmon, test
+#   - Themes: mono, simple (default theme enabled)
+#   - Debug: debugging, monkey, test
+#   - Enabled Debug: sysmon (perf_monitor, mem_monitor)
 #   - Widgets: lottie (LV_USE_LOTTIE 0), 3dtexture (LV_USE_3DTEXTURE 0)
 #   - Others: file_explorer, fragment (disabled in lv_conf.h)
 #
@@ -124,6 +125,7 @@ SRCDIRS		+= lvgl/src \
 			   lvgl/src/stdlib/builtin \
 			   lvgl/src/stdlib/clib \
 			   lvgl/src/themes \
+			   lvgl/src/themes/default \
 			   lvgl/src/themes/simple \
 			   lvgl/src/tick \
 			   lvgl/src/widgets/animimage \
@@ -163,7 +165,11 @@ SRCDIRS		+= lvgl/src \
 			   lvgl/src/widgets/tileview \
 			   lvgl/src/widgets/win \
 			   lvgl/src/drivers \
-			   lvgl/src/drivers/display
+			   lvgl/src/drivers/display \
+			   lvgl/src/debugging/sysmon \
+			   lvgl/demos \
+			   lvgl/demos/widgets \
+			   lvgl/demos/widgets/assets
 
 #
 # You shouldn't need to change anything below this point.

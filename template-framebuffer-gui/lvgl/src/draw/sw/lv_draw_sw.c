@@ -315,47 +315,27 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
 
     lv_draw_task_t * t = NULL;
 
-    LV_LOG_USER("PROBE_SW_DISPATCH: calling lv_draw_get_available_task, head=%p", layer->draw_task_head);
-
     t = lv_draw_get_available_task(layer, NULL, DRAW_UNIT_ID_SW);
 
-    LV_LOG_USER("PROBE_SW_DISPATCH: lv_draw_get_available_task returned t=%p", t);
-
     if(t == NULL) {
-        lv_draw_task_t * tt = layer->draw_task_head;
-        if(tt) {
-            LV_LOG_USER("PROBE_SW_DISPATCH: head type=%d state=%d", (int)tt->type, (int)tt->state);
-        } else {
-            LV_LOG_USER("PROBE_SW_DISPATCH: head is NULL");
-        }
-        LV_LOG_ERROR("SW dispatch: no available task, head=%p", layer->draw_task_head);
         LV_PROFILER_DRAW_END;
         return LV_DRAW_UNIT_IDLE;  /*Couldn't start rendering*/
     }
 
     void * buf = lv_draw_layer_alloc_buf(layer);
 
-    LV_LOG_USER("PROBE_SW_DISPATCH: lv_draw_layer_alloc_buf returned buf=%p", buf);
-
     if(buf == NULL) {
-        LV_LOG_ERROR("SW dispatch: alloc_buf returned NULL!");
         LV_PROFILER_DRAW_END;
         return LV_DRAW_UNIT_IDLE;  /*Couldn't start rendering*/
     }
 
-    LV_LOG_ERROR("SW dispatch: executing task type=%d state=%d", t->type, t->state);
     t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
     draw_sw_unit->task_act = t;
 
-    LV_LOG_USER("PROBE_SW_DISPATCH: execute_drawing START type=%d", (int)t->type);
-
     execute_drawing(t);
-
-    LV_LOG_USER("PROBE_SW_DISPATCH: execute_drawing END type=%d", (int)t->type);
 
     draw_sw_unit->task_act->state = LV_DRAW_TASK_STATE_FINISHED;
     draw_sw_unit->task_act = NULL;
-    LV_LOG_ERROR("SW dispatch: task finished");
 
     /*The draw unit is free now. Request a new dispatching as it can get a new task*/
     lv_draw_dispatch_request();
