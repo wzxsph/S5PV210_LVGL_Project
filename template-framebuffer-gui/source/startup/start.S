@@ -20,7 +20,7 @@
 
 /* First-level section attributes, kept aligned with the known-good S5PV210 style
  * used in the reference code the project is following. */
-.equ	MMU_DESC_SDRAM_CACHED,	0x00000c1e	/* RW, cached/buffered section */
+.equ	MMU_DESC_SDRAM_CACHED,	0x00001c0e	/* RW, executable WB/WA cached section */
 .equ	MMU_DESC_FB_NOCACHE,	0x00000c12	/* RW, uncached section */
 .equ	MMU_DESC_MMIO_DEVICE,	0x00000c12	/* RW, uncached/device section */
 
@@ -254,10 +254,8 @@ mmu_init:
 	isb
 
 	/* clear the 16KB L1 table */
-	ldr	r4, =__mmu_table_start
-	ldr	r5, =__mmu_table_end
-	mov	r0, r4
-	mov	r1, r5
+	ldr	r0, =__mmu_table_start
+	ldr	r1, =__mmu_table_end
 	mov	r2, #0
 	bl	mem_clear
 
@@ -265,21 +263,21 @@ mmu_init:
 	bl	uart2_putc
 
 	/* 0x30000000 - 0x4fffffff: normal cached SDRAM */
-	mov	r0, r4
+	ldr	r0, =__mmu_table_start
 	ldr	r1, =MMU_SECT_SDRAM_START
 	ldr	r2, =MMU_SECT_SDRAM_END
 	ldr	r3, =MMU_DESC_SDRAM_CACHED
 	bl	map_sections
 
 	/* 0x3e000000 - 0x3e5fffff: framebuffer window as non-cacheable normal memory */
-	mov	r0, r4
+	ldr	r0, =__mmu_table_start
 	ldr	r1, =MMU_SECT_FB_START
 	ldr	r2, =MMU_SECT_FB_END
 	ldr	r3, =MMU_DESC_FB_NOCACHE
 	bl	map_sections
 
 	/* 0xe0000000 - 0xffffffff: peripheral registers as strongly ordered/device memory */
-	mov	r0, r4
+	ldr	r0, =__mmu_table_start
 	ldr	r1, =MMU_SECT_MMIO_START
 	ldr	r2, =MMU_SECT_MMIO_END
 	ldr	r3, =MMU_DESC_MMIO_DEVICE
@@ -311,18 +309,45 @@ mmu_init:
 	mov	r0, #'4'
 	bl	uart2_putc
 
-	/* enable MMU, D-cache, I-cache and branch prediction */
+	/* enable MMU first so we can isolate which later cache step breaks boot */
 	mrc	p15, 0, r0, c1, c0, 0
 	bic	r0, r0, #(1 << 1)		/* A = 0 */
 	orr	r0, r0, #(1 << 0)		/* M */
-	orr	r0, r0, #(1 << 2)		/* C */
-	orr	r0, r0, #(1 << 11)		/* Z */
-	orr	r0, r0, #(1 << 12)		/* I */
 	mcr	p15, 0, r0, c1, c0, 0
 	dsb
 	isb
 
 	mov	r0, #'5'
+	bl	uart2_putc
+
+	/* turn on I-cache next */
+	mrc	p15, 0, r0, c1, c0, 0
+	orr	r0, r0, #(1 << 12)		/* I */
+	mcr	p15, 0, r0, c1, c0, 0
+	dsb
+	isb
+
+	mov	r0, #'6'
+	bl	uart2_putc
+
+	/* then branch prediction */
+	mrc	p15, 0, r0, c1, c0, 0
+	orr	r0, r0, #(1 << 11)		/* Z */
+	mcr	p15, 0, r0, c1, c0, 0
+	dsb
+	isb
+
+	mov	r0, #'7'
+	bl	uart2_putc
+
+	/* finally enable D-cache */
+	mrc	p15, 0, r0, c1, c0, 0
+	orr	r0, r0, #(1 << 2)		/* C */
+	mcr	p15, 0, r0, c1, c0, 0
+	dsb
+	isb
+
+	mov	r0, #'8'
 	bl	uart2_putc
 
 	mov	pc, lr
