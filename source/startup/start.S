@@ -319,7 +319,7 @@ mmu_init:
 mem_clear:
 	sub	r1, r1, #32
 	cmp	r0, r1
-	ble	cp
+	bgt	cp
 	mov r3, #0
 	mov r4, #0
 	mov r5, #0

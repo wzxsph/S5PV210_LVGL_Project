@@ -111,7 +111,7 @@ void do_irqs(struct pt_regs_t * regs)
 		(s5pv210_irq_handler[offset + 32].func)(s5pv210_irq_handler[offset + 32].data);
 
 		/* clear software interrupt */
-		writel(S5PV210_VIC1_SOFTINTCLEAR, 0x1<<(offset-32));
+		writel(S5PV210_VIC1_SOFTINTCLEAR, 0x1<<offset);
 
 		/* set all vic address to zero */
 		writel(S5PV210_VIC1_ADDRESS, 0x00000000);
@@ -125,7 +125,7 @@ void do_irqs(struct pt_regs_t * regs)
 		(s5pv210_irq_handler[offset + 64].func)(s5pv210_irq_handler[offset + 64].data);
 
 		/* clear software interrupt */
-		writel(S5PV210_VIC2_SOFTINTCLEAR, 0x1<<(offset-32));
+		writel(S5PV210_VIC2_SOFTINTCLEAR, 0x1<<offset);
 
 		/* set all vic address to zero */
 		writel(S5PV210_VIC2_ADDRESS, 0x00000000);
@@ -139,7 +139,7 @@ void do_irqs(struct pt_regs_t * regs)
 		(s5pv210_irq_handler[offset + 96].func)(s5pv210_irq_handler[offset + 96].data);
 
 		/* clear software interrupt */
-		writel(S5PV210_VIC3_SOFTINTCLEAR, 0x1<<(offset-32));
+		writel(S5PV210_VIC3_SOFTINTCLEAR, 0x1<<offset);
 
 		/* set all vic address to zero */
 		writel(S5PV210_VIC3_ADDRESS, 0x00000000);

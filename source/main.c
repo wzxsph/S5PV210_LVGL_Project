@@ -5,6 +5,7 @@
 #include <s5pv210-serial.h>
 #include <s5pv210-serial-stdio.h>
 #include <s5pv210-cp15.h>
+#include <s5pv210-tick.h>
 
 /* 外部声明：显示接口初始化 */
 extern void lv_port_disp_init(void);
@@ -308,7 +309,15 @@ int main(int argc, char * argv[])
 
 	while(1) {
 		loop_count++;
-		lv_timer_handler();
+		result = lv_timer_handler();
+
+		/* 基于 jiffies 的非阻塞节流，避免 mdelay 期间完全阻塞 */
+		if (result > 1 && result < 100) {
+			u32_t wait_until = jiffies + (result / 10);
+			while ((s32_t)(jiffies - wait_until) < 0) {
+				/* idle spin, IRQ keeps jiffies advancing */
+			}
+		}
 
 		if ((get_system_time_ms() - last_debug_time) >= 5000) {
 			last_debug_time = get_system_time_ms();

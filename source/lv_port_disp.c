@@ -85,6 +85,14 @@ static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px
 	int32_t w = area->x2 - area->x1 + 1;
 	int32_t h = area->y2 - area->y1 + 1;
 
+	/* Bounds check: clamp to panel dimensions to prevent out-of-bounds memcpy */
+	if (area->x1 < 0 || area->y1 < 0 ||
+	    area->x2 >= PANEL_HOR_RES || area->y2 >= PANEL_VER_RES ||
+	    w <= 0 || h <= 0) {
+		lv_display_flush_ready(disp);
+		return;
+	}
+
 	/*
 	 * 行步幅 (stride)：
 	 *   shadow_fb / VRAM: PANEL_HOR_RES * 4 = 4096 (全屏宽)

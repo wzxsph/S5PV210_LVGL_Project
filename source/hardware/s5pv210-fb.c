@@ -933,15 +933,16 @@ void s5pv210_screen_wait_vsync(void)
 	 *
 	 * Timeout: 2 jiffies = 20ms (> one 60Hz frame period of 16.7ms).
 	 */
-	extern volatile u64_t jiffies;
-	u64_t deadline = jiffies + 2;   /* 20ms timeout */
+	extern volatile u32_t jiffies;
+	u32_t deadline = jiffies + 2;   /* 20ms timeout */
 
 	/* Clear frame interrupt pending bit (write-1-to-clear) */
 	writel(S5PV210_VIDINTCON1, readl(S5PV210_VIDINTCON1) | (1 << 1));
 
-	/* Poll until FIMD signals frame-end (bit 1 set) or timeout */
+	/* Poll until FIMD signals frame-end (bit 1 set) or timeout.
+	 * Use signed comparison to handle jiffies wraparound correctly. */
 	while (!(readl(S5PV210_VIDINTCON1) & (1 << 1))) {
-		if (jiffies >= deadline)
+		if ((s32_t)(jiffies - deadline) >= 0)
 			break;
 	}
 }

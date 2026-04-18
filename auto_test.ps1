@@ -28,6 +28,14 @@ Write-Host "========================================" -ForegroundColor Cyan
 $tftpProcess = $null
 
 if (Get-Command python -ErrorAction SilentlyContinue) {
+    # Kill any stale TFTP server processes to free port 69
+    $staleProcs = Get-Process python* -ErrorAction SilentlyContinue
+    if ($staleProcs) {
+        Write-Host "[INFO] Killing $($staleProcs.Count) stale Python process(es)..." -ForegroundColor Yellow
+        $staleProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+    }
+
     Write-Host "[INFO] Starting TFTP server..." -ForegroundColor Yellow
     $tftpProcess = Start-Process -FilePath "python" -ArgumentList $tftpScript -PassThru -WindowStyle Minimized
     Write-Host "[OK] TFTP Server started (PID: $($tftpProcess.Id))" -ForegroundColor Green
@@ -48,39 +56,65 @@ $serial.DiscardInBuffer()
 Write-Host "[OK] Connected to $SerialPort" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "[0] Sending newline to get prompt..." -ForegroundColor Yellow
+# ========== Step 0: Wait for U-Boot prompt ==========
+Write-Host "[0] Waiting for U-Boot prompt (x210 #)..." -ForegroundColor Yellow
+$serial.DiscardInBuffer()
+$promptBuffer = ""
+$promptFound = $false
+$promptTimeout = 30  # seconds to wait for prompt
+$promptStart = Get-Date
+
+# Send CR to wake up U-Boot, then poll for prompt
 $serial.Write([char]13)
-Start-Sleep -Milliseconds 800
 
-# First, let's see what's happening on the serial port
-Write-Host "[DEBUG] Reading initial serial output..." -ForegroundColor Cyan
-Start-Sleep -Milliseconds 2000
-$initialOutput = $serial.ReadExisting()
-Write-Host "[DEBUG] Initial output: '$initialOutput'" -ForegroundColor Cyan
+while (-not $promptFound) {
+    Start-Sleep -Milliseconds 300
 
-# Try to get to U-Boot prompt
-Write-Host "[DEBUG] Trying to enter U-Boot..." -ForegroundColor Cyan
-for ($i=0; $i -lt 5; $i++) {
-    $serial.Write(" " + [char]13)
-    Start-Sleep -Milliseconds 200
+    if ($serial.BytesToRead -gt 0) {
+        $chunk = $serial.ReadExisting()
+        $promptBuffer += $chunk
+        Write-Host -NoNewline $chunk
+    }
+
+    # Check if prompt appeared
+    if ($promptBuffer -match "x210 #\s*$" -or $promptBuffer -match "x210 #") {
+        $promptFound = $true
+        Write-Host ""
+        Write-Host "[OK] U-Boot prompt detected" -ForegroundColor Green
+        break
+    }
+
+    # Periodically send CR to interrupt autoboot or get prompt
+    $elapsed = (Get-Date) - $promptStart
+    if (($elapsed.TotalMilliseconds % 2000) -lt 400) {
+        $serial.Write([char]13)
+    }
+
+    if ($elapsed.TotalSeconds -gt $promptTimeout) {
+        Write-Host ""
+        Write-Host "[ERROR] Timeout waiting for U-Boot prompt after ${promptTimeout}s" -ForegroundColor Red
+        Write-Host "[HINT] Please reset the board (power cycle) and re-run the script" -ForegroundColor Yellow
+        $serial.Close()
+        if ($tftpProcess -and !$tftpProcess.HasExited) {
+            Stop-Process -Id $tftpProcess.Id -Force -ErrorAction SilentlyContinue
+        }
+        exit 1
+    }
 }
-Start-Sleep -Milliseconds 1000
-$ubootOutput = $serial.ReadExisting()
-Write-Host "[DEBUG] U-Boot prompt attempt: '$ubootOutput'" -ForegroundColor Cyan
+
+# Flush any remaining data after prompt
+Start-Sleep -Milliseconds 200
+$serial.ReadExisting() | Out-Null
 
 Write-Host "[1] Sending tftp command..." -ForegroundColor Yellow
 $tftpCommand = "tftp 0x30000000 template-framebuffer-gui.bin"
 Write-Host "[DEBUG] Command: $tftpCommand" -ForegroundColor Cyan
 $serial.Write($tftpCommand + [char]13)
-Start-Sleep -Milliseconds 200
 
-# Don't clear buffer immediately, let's see what's returned
-Write-Host "[DEBUG] Reading response..." -ForegroundColor Cyan
-Start-Sleep -Milliseconds 1000
-$response = $serial.ReadExisting()
-Write-Host "[DEBUG] Response: '$response'" -ForegroundColor Cyan
+$buffer = ""
 
-$buffer = ""  # Reset buffer AFTER sending tftp command
+# Small delay then start monitoring
+Start-Sleep -Milliseconds 500
 
 Write-Host "[2] Waiting for TFTP to complete..." -ForegroundColor Yellow
 $tftpDone = $false

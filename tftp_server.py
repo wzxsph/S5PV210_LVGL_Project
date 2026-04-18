@@ -30,18 +30,27 @@ class TFTPServer:
                 print(f"[TFTP] Warning: Cannot bind to {preferred}, searching for alternative...")
         
         # List all interfaces and find 192.168.1.x
+        # Method 1: Use socket to enumerate (works on all locales)
         try:
-            import subprocess
+            import ipaddress
+            hostname = socket.gethostname()
+            for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
+                ip = info[4][0]
+                if ip.startswith('192.168.1.'):
+                    print(f"[TFTP] Found interface via getaddrinfo: {ip}")
+                    return ip
+        except Exception as e:
+            print(f"[TFTP] getaddrinfo failed: {e}")
+
+        # Method 2: Fallback to ipconfig parsing
+        try:
+            import subprocess, re
             result = subprocess.run(['ipconfig'], capture_output=True, text=True, timeout=5)
-            for line in result.stdout.split('\n'):
-                if '192.168.1.' in line:
-                    # Extract IP address
-                    parts = line.strip().split(':')
-                    if len(parts) >= 2:
-                        ip = parts[-1].strip()
-                        if ip.startswith('192.168.1.'):
-                            print(f"[TFTP] Found interface: {ip}")
-                            return ip
+            # Match any line containing an IPv4 address in 192.168.1.x range
+            for match in re.finditer(r'192\.168\.1\.\d{1,3}', result.stdout):
+                ip = match.group(0)
+                print(f"[TFTP] Found interface via ipconfig: {ip}")
+                return ip
         except Exception as e:
             print(f"[TFTP] Could not run ipconfig: {e}")
         
