@@ -175,7 +175,11 @@ LD			:= $(CROSS)ld
 AR			:= $(CROSS)ar
 OC			:= $(CROSS)objcopy
 OD			:= $(CROSS)objdump
+ifeq ($(HOSTOS),windows)
+MKDIR		:= mkdir
+else
 MKDIR		:= mkdir -p
+endif
 CP			:= cp -af
 RM			:= rm -rf
 CD			:= cd
