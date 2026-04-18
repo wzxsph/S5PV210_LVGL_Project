@@ -1,0 +1,110 @@
+﻿================================================================================
+TEST REPORT - 20260418_202954
+================================================================================
+Serial Port : COM11
+Baud Rate   : 115200
+Status      : FAIL
+Start Time  : 2026-04-18 20:29:54
+Duration    : 207.8s
+================================================================================
+Flush Count : -1
+Missing     : [TEST] lv_timer_handler() RETURNED!; [DEMO] Switched to demo 2/5
+Failures    : lv_timer_handler returned without a positive flush count
+Validation  : FAIL
+================================================================================
+
+SERIAL OUTPUT:
+--------------------------------------------------------------------------------
+go 0x30000000
+## Starting application at 0x30000000 ...
+
+============================================
+  S5PV210 LVGL v9 Application Starting...
+  Build: Apr 18 2026 20:04:36
+============================================
+[INIT] Starting system initialization...
+[INIT] malloc_init() done
+[INIT] s5pv210_clk_initial() done
+[INIT] Cache and MMU enabled for LVGL performance
+[INIT] s5pv210_irq_initial() done
+[INIT] s5pv210_tick_initial() done
+[INIT] s5pv210_tick_delay_initial() done
+[INIT] s5pv210_serial_initial() done
+[INIT] UART2 configured for debug @ 115200 baud
+[INIT] MMU/cache enabled by start.S
+[INIT]   SCTLR=0x00c5187d TTBR0=0x307d8000 DACR=0xffffffff
+[INIT]   MMU table: 0x307d8000 - 0x307dc000
+[INIT]   FB NC window: 0x3e000000 - 0x3e600000
+[INIT] s5pv210_fb_initial() done - LCD should be ON now
+[INIT] Framebuffer base: 0x3e000000
+[INIT] System initialization COMPLETE!
+[INIT] ============================================
+
+[LVGL] Calling lv_init()...
+[LVGL] lv_init() SUCCESS!
+[LVGL] Registering log callback...
+[LVGL] Log callback registered
+[LVGL] Registering tick callback (jiffies->ms)...
+[LVGL] Tick callback registered. Current time: 490 ms
+[LVGL] Memory status:
+[LVGL]   Total: 4192128 bytes
+[LVGL]   Free: 4190012 bytes
+[LVGL]   Used: 2116 bytes (1%)
+
+[DISP] Calling lv_port_disp_init()...
+
+[DISP_INIT] ======== Display Driver Initialization =======
+[DISP_INIT] Panel Resolution: 1024x600
+[DISP_INIT] Render mode: PARTIAL (120-line cached + shadow FB)
+[DISP_INIT] Display created
+[DISP_INIT] Render buffer: 0x3035b940 (491520 bytes, 120 lines)
+[DISP_INIT] Shadow FB:     0x30103940 (2457600 bytes, anti-tear)
+[DISP_INIT] Flush callback registered
+[DISP_INIT] ======== Display Init COMPLETE =======
+
+[DISP] lv_port_disp_init() returned!
+[INDEV] Calling lv_port_indev_init()...
+[INDEV] lv_port_indev_init() done
+
+[DEMO] Starting lv_demo_widgets()...
+[DEMO] lv_demo_widgets() created
+[DEMO] First render: 300 ms, flush=5
+
+[LOOP] Entering main loop...
+============================================
+
+[LOOP] tick=5770 loops=3994440 flush=41
+[LOOP] tick=10900 loops=6575942 flush=86
+[LOOP] tick=15900 loops=11973361 flush=120
+[LOOP] tick=20940 loops=16823610 flush=163
+[LOOP] tick=25940 loops=20647904 flush=214
+[LOOP] tick=30950 loops=24075836 flush=307
+[LOOP] tick=36010 loops=28354999 flush=359
+[LOOP] tick=41650 loops=30399891 flush=399
+[LOOP] tick=46660 loops=33295478 flush=437
+[LOOP] tick=51700 loops=37741723 flush=478
+[LOOP] tick=56700 loops=39908500 flush=513
+[LOOP] tick=61740 loops=43919595 flush=547
+[LOOP] tick=66770 loops=48000921 flush=580
+[LOOP] tick=71770 loops=52051069 flush=613
+[LOOP] tick=76770 loops=56001740 flush=647
+[LOOP] tick=81770 loops=60038950 flush=680
+[LOOP] tick=86770 loops=64089898 flush=713
+[LOOP] tick=91770 loops=68039625 flush=747
+[LOOP] tick=96770 loops=72076745 flush=780
+[LOOP] tick=101770 loops=75785319 flush=826
+[LOOP] tick=106800 loops=79153483 flush=886
+[LOOP] tick=111830 loops=81718738 flush=928
+[LOOP] tick=116930 loops=86058905 flush=962
+[LOOP] tick=122030 loops=90399919 flush=996
+[LOOP] tick=127750 loops=92297327 flush=1038
+[LOOP] tick=132750 loops=96087789 flush=1072
+[LOOP] tick=137800 loops=99874049 flush=1106
+[LOOP] tick=142820 loops=103731229 flush=1139
+[LOOP] tick=147820 loops=107536839 flush=1172
+[LOOP] tick=152820 loops=111251763 flush=1206
+[LOOP] tick=157820 loops=115080469 flush=1239
+
+
+--------------------------------------------------------------------------------
+END OF REPORT
