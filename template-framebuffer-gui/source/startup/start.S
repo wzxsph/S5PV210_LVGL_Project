@@ -239,6 +239,8 @@ invalidate_dcache_all:
  * and peripheral MMIO strongly ordered
  */
 mmu_init:
+	stmdb	sp!, {lr}
+
 	mov	r0, #'0'
 	bl	uart2_putc
 
@@ -350,7 +352,7 @@ mmu_init:
 	mov	r0, #'8'
 	bl	uart2_putc
 
-	mov	pc, lr
+	ldmia	sp!, {pc}
 
 /*
  * memory clear zero
