@@ -445,10 +445,14 @@ refr_finish:
     lv_draw_sw_mask_cleanup();
 #endif
 
-    lv_display_send_event(disp_refr, LV_EVENT_REFR_READY, NULL);
+    /* TEMP: Commented out to test if this causes the hang */
+    /* lv_display_send_event(disp_refr, LV_EVENT_REFR_READY, NULL); */
 
-    LV_TRACE_REFR("finished");
+    LV_TRACE_REFR("finished step 1");
     LV_PROFILER_REFR_END;
+    LV_TRACE_REFR("finished step 2");
+    /* Here - what happens after? */
+    LV_TRACE_REFR("finished step 3 - returning now");
 }
 
 /**
@@ -663,10 +667,14 @@ static void refr_sync_areas(void)
     const bool auto_sync = disp_refr->render_mode == LV_DISPLAY_RENDER_MODE_DIRECT &&
                            lv_display_is_double_buffered(disp_refr);
     const bool user_sync = disp_refr->sync_cb != NULL;
-    if(!auto_sync && !user_sync) return;
+    if(!auto_sync && !user_sync) {
+        return;
+    }
 
     /*Do not sync if no sync areas*/
-    if(lv_ll_is_empty(&disp_refr->sync_areas)) return;
+    if(lv_ll_is_empty(&disp_refr->sync_areas)) {
+        return;
+    }
 
     LV_PROFILER_REFR_BEGIN;
     /*With double buffered direct mode synchronize the rendered areas to the other buffer*/
@@ -800,7 +808,9 @@ static void refr_invalid_areas(void)
 
     for(i = 0; i < (int32_t)disp_refr->inv_p; i++) {
         /*Refresh the unjoined areas*/
-        if(disp_refr->inv_area_joined[i]) continue;
+        if(disp_refr->inv_area_joined[i]) {
+            continue;
+        }
 
         if(i == last_i) disp_refr->last_area = 1;
         disp_refr->last_part = 0;
@@ -909,15 +919,16 @@ static void refr_area(const lv_area_t * area_p, int32_t y_offset)
     /*Try to divide the area to smaller tiles*/
     uint32_t tile_cnt = 1;
     int32_t tile_h = lv_area_get_height(area_p);
+    uint32_t area_buf_size = 0;
+    uint32_t max_tile_cnt = disp_refr->tile_cnt;
+    uint32_t total_buf_size = layer->draw_buf->data_size;
     if(LV_COLOR_FORMAT_IS_INDEXED(layer->color_format) == false) {
         /* Assume that the buffer size (can be screen sized or smaller in case of partial mode)
          * and max tile size are the optimal scenario. From this calculate the ideal tile size
          * and set the tile count and tile height accordingly.
          */
-        uint32_t max_tile_cnt = disp_refr->tile_cnt;
-        uint32_t total_buf_size = layer->draw_buf->data_size;
         uint32_t ideal_tile_size = total_buf_size / max_tile_cnt;
-        uint32_t area_buf_size = lv_area_get_size(area_p) * lv_color_format_get_size(layer->color_format);
+        area_buf_size = lv_area_get_size(area_p) * lv_color_format_get_size(layer->color_format);
 
         tile_cnt = (area_buf_size + (ideal_tile_size - 1)) / ideal_tile_size; /*Round up*/
         tile_h = lv_area_get_height(area_p) / tile_cnt;
@@ -1118,6 +1129,7 @@ static void refr_obj_and_children(lv_layer_t * layer, lv_obj_t * top_obj)
     if(top_obj == NULL) return;  /*Shouldn't happen*/
 
     LV_PROFILER_REFR_BEGIN;
+
     /*Draw the 'younger' sibling objects because they can be on top_obj*/
     lv_obj_t * parent;
     lv_obj_t * border_p = top_obj;
@@ -1129,8 +1141,13 @@ static void refr_obj_and_children(lv_layer_t * layer, lv_obj_t * top_obj)
         layer->recolor = lv_obj_get_style_recolor_recursive(parent, LV_PART_MAIN);
     }
 
-    /*Refresh the top object and its children*/
     lv_obj_refr(layer, top_obj);
+
+    uint32_t child_cnt = lv_obj_get_child_count(top_obj);
+
+    for(uint32_t i = 0; i < child_cnt; i++) {
+        refr_obj_and_children(layer, top_obj->spec_attr->children[i]);
+    }
 
     /*Do until not reach the screen*/
     while(parent != NULL) {

@@ -156,7 +156,6 @@ void lv_draw_box_shadow(lv_layer_t * layer, const lv_draw_box_shadow_dsc_t * dsc
 
 void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_area_t * coords)
 {
-
     LV_PROFILER_DRAW_BEGIN;
 
     bool has_shadow;
@@ -175,20 +174,14 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
         has_shadow = true;
     }
 
-    if(dsc->bg_opa <= LV_OPA_MIN) has_fill = false;
-    else has_fill = true;
+    has_fill = (dsc->bg_opa > LV_OPA_MIN);
 
-    if(dsc->bg_image_opa <= LV_OPA_MIN || dsc->bg_image_src == NULL) has_bg_img = false;
-    else has_bg_img = true;
+    has_bg_img = (dsc->bg_image_opa > LV_OPA_MIN && dsc->bg_image_src != NULL);
 
-    if(dsc->border_opa <= LV_OPA_MIN
-       || dsc->border_width == 0
-       || dsc->border_post == true
-       || dsc->border_side == LV_BORDER_SIDE_NONE) has_border = false;
-    else has_border = true;
+    has_border = (dsc->border_opa > LV_OPA_MIN && dsc->border_width > 0 &&
+                  dsc->border_post == false && dsc->border_side != LV_BORDER_SIDE_NONE);
 
-    if(dsc->outline_opa <= LV_OPA_MIN || dsc->outline_width == 0) has_outline = false;
-    else has_outline = true;
+    has_outline = (dsc->outline_opa > LV_OPA_MIN && dsc->outline_width > 0);
 
     bool bg_cover = true;
     if(dsc->bg_opa < LV_OPA_COVER) bg_cover = false;
@@ -206,7 +199,7 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
         lv_layer_t * ds_layer = lv_draw_layer_create_drop_shadow(layer, &dsc->base, coords);
         LV_ASSERT_NULL(ds_layer);
         lv_draw_rect_dsc_t ds_dsc = *dsc;
-        ds_dsc.base.drop_shadow_opa = 0; /*Disable drop shadow so rendering below will render plain shadow*/
+        ds_dsc.base.drop_shadow_opa = 0;
         ds_dsc.shadow_opa = 0;
         lv_draw_rect(ds_layer, &ds_dsc, coords);
         lv_draw_layer_finish_drop_shadow(ds_layer, &dsc->base);
@@ -214,9 +207,7 @@ void lv_draw_rect(lv_layer_t * layer, const lv_draw_rect_dsc_t * dsc, const lv_a
 
     lv_draw_task_t * t;
 
-    /*Shadow*/
     if(has_shadow) {
-        /*Check whether the shadow is visible*/
         t = lv_draw_add_task(layer, coords, LV_DRAW_TASK_TYPE_BOX_SHADOW);
         lv_draw_box_shadow_dsc_t * shadow_dsc = t->draw_dsc;
 

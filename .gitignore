@@ -1,14 +1,24 @@
-# Workspace-level temporary files
-__pycache__/
-*.pyc
-*.pyo
-*.tmp
-*.log
+#
+# NOTE! Don't add files that are generated in specific
+# subdirectories here. Add them in the ".gitignore" file
+# in that subdirectory instead.
 
-# Editor/OS files
-.vscode/*.log
-.DS_Store
-Thumbs.db
+#
+# Normal rules
+#
+*.map
+*.elf
+*.bin
+*.rej
+*.orig
+*.d
+*.o
+*~
 
-# Local package/archive artifacts
-template-framebuffer-gui.zip
+#
+# Generated files
+#
+/source/.obj/
+/output/*
+/output
+

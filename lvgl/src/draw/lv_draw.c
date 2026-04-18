@@ -226,9 +226,7 @@ void lv_draw_dispatch(void)
     }
     if(!task_dispatched) {
         lv_draw_wait_for_finish();
-#if LV_USE_OS
         lv_draw_dispatch_request();
-#endif
     }
     LV_PROFILER_DRAW_END;
 }

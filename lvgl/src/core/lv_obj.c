@@ -771,11 +771,9 @@ static void lv_obj_draw(lv_event_t * e)
         }
 
         lv_obj_init_draw_rect_dsc(obj, LV_PART_MAIN, &draw_dsc);
-        /*If the border is drawn later disable loading its properties*/
         if(lv_obj_get_style_border_post(obj, LV_PART_MAIN)) {
             draw_dsc.border_post = 1;
         }
-
 
         lv_draw_rect(layer, &draw_dsc, &coords);
     }

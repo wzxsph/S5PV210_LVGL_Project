@@ -314,13 +314,16 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     }
 
     lv_draw_task_t * t = NULL;
+
     t = lv_draw_get_available_task(layer, NULL, DRAW_UNIT_ID_SW);
+
     if(t == NULL) {
         LV_PROFILER_DRAW_END;
         return LV_DRAW_UNIT_IDLE;  /*Couldn't start rendering*/
     }
 
     void * buf = lv_draw_layer_alloc_buf(layer);
+
     if(buf == NULL) {
         LV_PROFILER_DRAW_END;
         return LV_DRAW_UNIT_IDLE;  /*Couldn't start rendering*/
@@ -330,6 +333,7 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     draw_sw_unit->task_act = t;
 
     execute_drawing(t);
+
     draw_sw_unit->task_act->state = LV_DRAW_TASK_STATE_FINISHED;
     draw_sw_unit->task_act = NULL;
 

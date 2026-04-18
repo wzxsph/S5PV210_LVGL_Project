@@ -393,7 +393,6 @@ void lv_obj_update_layout(const lv_obj_t * obj)
         LV_LOG_TRACE("Layout update begin");
         scr->scr_layout_inv = 0;
         layout_update_core(scr);
-        LV_LOG_TRACE("Layout update end");
     }
 
     lv_display_t * disp = lv_obj_get_display(scr);
