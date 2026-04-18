@@ -5,6 +5,11 @@
 - 参考工程：`template-watchdog-timer/`
 - 上游 LVGL：`lvgl/`（通常不需要改）
 
+## 分支说明
+
+- **`withoutMMU`** - 当前开发分支，禁用MMU/Cache以确保显示正确，包含5个自动切换的Demo演示
+- **`main`** - 主分支（MMU功能开发中）
+
 ## 推荐工作流（最简）
 
 1. 编译主工程
@@ -27,16 +32,20 @@ powershell -ExecutionPolicy Bypass -File auto_test.ps1 -SerialPort COM6
 ## 目录导航
 
 - `template-framebuffer-gui/`: 主项目（代码、链接脚本、构建输出）
-- `template-framebuffer-gui/source/`: 启动代码、硬件驱动、图形抽象、GUI 逻辑
+  - `source/main.c`: 入口程序，包含5个自动切换的Demo
+  - `source/lv_port_disp.c`: LVGL显示驱动适配
+  - `source/startup/`: ARM启动代码
+  - `source/hardware/`: S5PV210硬件抽象层
 - `template-framebuffer-gui/include/`: 公共头文件
 - `template-framebuffer-gui/output/`: 构建产物（.elf/.bin/.map）
+- `lvgl/`: LVGL v9 上游源码
 - `doc/`: 进阶脚本与补充文档
 - `README.md`: 当前总览
-- `CLAUDE.md`: 代码代理的工程说明
+- `CLAUDE.md`: Claude AI 代理的工程说明
 
 ## 脚本约定
 
-- 根目录脚本用于“快捷入口”：
+- 根目录脚本用于”快捷入口”：
 	- `auto_test.ps1`
 	- `tftp_server.py`
 - 实际实现以 `template-framebuffer-gui/` 下脚本为准。
@@ -47,6 +56,18 @@ powershell -ExecutionPolicy Bypass -File auto_test.ps1 -SerialPort COM6
 - RAM: 512MB DDR2
 - LCD: 1024x600, XRGB8888
 - UART: UART2, 115200
+
+## 5个自动演示Demo
+
+系统启动后自动运行5个演示，每约8-10秒自动切换：
+
+| Demo | 内容 | 描述 |
+|------|------|------|
+| 1 | 彩色矩形 | 4个大面积彩色矩形（红、绿、蓝、黄） |
+| 2 | 彩虹条 | 7个水平彩色条带（红橙黄绿蓝靛紫） |
+| 3 | 圆形组合 | 中心大圆 + 8个环绕小圆 |
+| 4 | 彩色网格 | 4×3排列的彩色方块 |
+| 5 | 渐变形状 | 顶部/底部渐变条 + 中心圆形 + 左右矩形 |
 
 ## 常见问题
 

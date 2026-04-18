@@ -29,7 +29,6 @@
 #include <s5pv210-irq.h>
 #include <s5pv210/reg-timer.h>
 #include <s5pv210-tick.h>
-#include "lvgl/lvgl.h"
 
 volatile u32_t jiffies = 0;
 static u32_t tick_hz = 0;
@@ -39,8 +38,7 @@ static void timer_interrupt(void * data)
 	/* tick count */
 	jiffies++;
 
-	/* Notify LVGL that 10ms have passed */
-	lv_tick_inc(10);
+	/* LVGL tick 由 lv_tick_set_cb(get_system_time_ms) 驱动，无需再手动调用 lv_tick_inc */
 
 	/* clear interrupt status bit */
 	writel(S5PV210_TINT_CSTAT, (readl(S5PV210_TINT_CSTAT) & ~(0x1f<<5)) | (0x01<<9));

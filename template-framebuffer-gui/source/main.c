@@ -1,5 +1,6 @@
 #include <main.h>
 #include "lvgl/lvgl.h"
+#include "lvgl/demos/lv_demos.h"
 #include <stdio.h>
 #include <s5pv210-serial.h>
 #include <s5pv210-serial-stdio.h>
@@ -7,6 +8,9 @@
 
 /* 外部声明：显示接口初始化 */
 extern void lv_port_disp_init(void);
+
+/* 外部声明：输入设备初始化 */
+extern void lv_port_indev_init(void);
 
 /* 外部声明：毫秒时间获取函数 */
 extern uint32_t get_system_time_ms(void);
@@ -16,6 +20,11 @@ extern uint32_t flush_count;
 
 #define DEBUG_UART_CH   2       /* 使用 UART2 进行调试输出 */
 #define DEBUG_BAUD      B115200
+
+extern unsigned char __mmu_table_start;
+extern unsigned char __mmu_table_end;
+extern unsigned char __fb_nocache_start;
+extern unsigned char __fb_nocache_end;
 
 static void debug_printf(const char * fmt, ...)
 {
@@ -32,6 +41,45 @@ static void debug_printf(const char * fmt, ...)
 	}
 }
 
+static u32_t read_sctlr(void)
+{
+	u32_t value;
+
+	__asm__ __volatile__(
+		"mrc p15, 0, %0, c1, c0, 0"
+		: "=r" (value)
+		:
+		: "memory");
+
+	return value;
+}
+
+static u32_t read_ttbr0(void)
+{
+	u32_t value;
+
+	__asm__ __volatile__(
+		"mrc p15, 0, %0, c2, c0, 0"
+		: "=r" (value)
+		:
+		: "memory");
+
+	return value;
+}
+
+static u32_t read_dacr(void)
+{
+	u32_t value;
+
+	__asm__ __volatile__(
+		"mrc p15, 0, %0, c3, c0, 0"
+		: "=r" (value)
+		:
+		: "memory");
+
+	return value;
+}
+
 /* 调试探针函数（供 LVGL 内部调用） */
 void my_debug_printf(const char * fmt, ...)
 {
@@ -45,19 +93,6 @@ void my_debug_printf(const char * fmt, ...)
 
 	if (len > 0) {
 		s5pv210_serial_write_string(DEBUG_UART_CH, buf);
-	}
-}
-
-/* 简单的栈深度测试 - 递归调用 */
-void test_stack_recursion(int depth)
-{
-	volatile char buf[64];  /* 用volatile防止优化 */
-	buf[0] = depth & 0xFF;
-	buf[63] = (depth >> 8) & 0xFF;
-	(void)buf;  /* 防止未使用警告 */
-
-	if (depth < 50) {
-		test_stack_recursion(depth + 1);
 	}
 }
 
@@ -139,6 +174,9 @@ static void my_log_print_cb(lv_log_level_t level, const char * buf)
 	debug_printf("%s %s", level_str, buf);
 }
 
+
+
+
 static void do_system_initial(void)
 {
 	debug_printf("[INIT] Starting system initialization...\r\n");
@@ -149,11 +187,9 @@ static void do_system_initial(void)
 	s5pv210_clk_initial();
 	debug_printf("[INIT] s5pv210_clk_initial() done\r\n");
 
-	/* 注意：Cache 和 MMU 已由 start.S 中的 mmu_init 启用
-	 * MMU翻译表配置：SDRAM 0x20000000-0x3FFFFFFF 可缓存/可缓冲，iRAM 0xD0020000 可缓存
-	 *Framebuffer 0x3E000000 非缓存(NC)属性确保显示正确
-	 */
-	debug_printf("[INIT] Cache and MMU enabled by start.S (SDRAM cached, FB NC)\r\n");
+	/* 注意：暂时禁用 Cache 和 MMU，因为没有正确的翻译表会导致显示异常 */
+	/* TODO: 后续需要正确配置 MMU 翻译表后才能启用缓存以提升渲染性能 */
+	debug_printf("[INIT] Cache and MMU enabled for LVGL performance\r\n");
 
 	s5pv210_irq_initial();
 	debug_printf("[INIT] s5pv210_irq_initial() done\r\n");
@@ -170,9 +206,21 @@ static void do_system_initial(void)
 	/* 配置 UART2 用于调试输出（如果尚未配置） */
 	s5pv210_serial_setup(DEBUG_UART_CH, DEBUG_BAUD, DATA_BITS_8, PARITY_NONE, STOP_BITS_1);
 	debug_printf("[INIT] UART2 configured for debug @ 115200 baud\r\n");
+	debug_printf("[INIT] MMU/cache enabled by start.S\r\n");
+	debug_printf("[INIT]   SCTLR=0x%08x TTBR0=0x%08x DACR=0x%08x\r\n",
+	             read_sctlr(), read_ttbr0(), read_dacr());
+	debug_printf("[INIT]   MMU table: 0x%08x - 0x%08x\r\n",
+	             (unsigned int)&__mmu_table_start, (unsigned int)&__mmu_table_end);
+	debug_printf("[INIT]   FB NC window: 0x%08x - 0x%08x\r\n",
+	             (unsigned int)&__fb_nocache_start, (unsigned int)&__fb_nocache_end);
 
 	s5pv210_fb_initial();
 	debug_printf("[INIT] s5pv210_fb_initial() done - LCD should be ON now\r\n");
+	{
+		struct surface_t * surface = s5pv210_screen_surface();
+		debug_printf("[INIT] Framebuffer base: 0x%08x\r\n",
+		             surface ? (unsigned int)surface->pixels : 0);
+	}
 
 	led_initial();
 	beep_initial();
@@ -182,62 +230,8 @@ static void do_system_initial(void)
 	debug_printf("[INIT] ============================================\r\n");
 }
 
-/*-----------------------------------------------------
- * 直接Framebuffer测试（不依赖LVGL）
- *-----------------------------------------------------*/
-static void rgb_test_direct_framebuffer(void)
-{
-	extern struct surface_t * s5pv210_screen_surface(void);
-	extern void s5pv210_screen_swap(void);
-	extern void s5pv210_screen_flush(void);
-
-	struct surface_t * surf = s5pv210_screen_surface();
-	debug_printf("\r\n[RGB_TEST] ======== Direct Framebuffer Test =======\r\n");
-	debug_printf("[RGB_TEST] surface @ 0x%08X\r\n", (unsigned int)surf);
-	debug_printf("[RGB_TEST] pixels @ 0x%08X\r\n", (unsigned int)surf->pixels);
-
-	/* ARM Demo 风格：swap -> 写入 -> flush */
-	debug_printf("[RGB_TEST] Calling s5pv210_screen_swap()...\r\n");
-	s5pv210_screen_swap();
-
-	surf = s5pv210_screen_surface();
-	uint32_t * fb = (uint32_t *)surf->pixels;
-	debug_printf("[RGB_TEST] After swap: pixels @ 0x%08X\r\n", (unsigned int)fb);
-
-	/* 绘制 RGB 条纹 */
-	debug_printf("[RGB_TEST] Drawing RGB stripes...\r\n");
-	for (int i = 0; i < 1024 * 200; i++) fb[i] = 0xFFFF0000;  /* Red */
-	for (int i = 1024 * 200; i < 1024 * 400; i++) fb[i] = 0xFF00FF00;  /* Green */
-	for (int i = 1024 * 400; i < 1024 * 600; i++) fb[i] = 0xFF0000FF;  /* Blue */
-	debug_printf("[RGB_TEST] RGB stripes drawn to buffer\r\n");
-
-	/* 更新 FIMD 寄存器 */
-	debug_printf("[RGB_TEST] Calling s5pv210_screen_flush()...\r\n");
-	s5pv210_screen_flush();
-	debug_printf("[RGB_TEST] Flush complete\r\n");
-
-	/* 再swap一次，显示刚才绘制的缓冲区 */
-	debug_printf("[RGB_TEST] Calling s5pv210_screen_swap() to display...\r\n");
-	s5pv210_screen_swap();
-
-	debug_printf("[RGB_TEST] ======== RGB Test Complete =======\r\n");
-	debug_printf("[RGB_TEST] LCD should show RGB stripes now!\r\n");
-
-	/* 保留RGB条纹3秒让用户确认 */
-	mdelay(3000);
-	debug_printf("[RGB_TEST] Continuing to LVGL init...\r\n");
-}
-
 int main(int argc, char * argv[])
 {
-	/* 终极防线：强制清零 BSS 段，防止未初始化全局变量导致死锁 */
-	extern unsigned int __bss_start;
-	extern unsigned int __bss_end;
-	unsigned int * bss_ptr = (unsigned int *)&__bss_start;
-	while(bss_ptr < (unsigned int *)&__bss_end) {
-		*bss_ptr++ = 0;
-	}
-
 	uint32_t loop_count = 0;
 	static uint32_t last_debug_time = 0;
 	uint32_t t0, t1, result;
@@ -290,64 +284,39 @@ int main(int argc, char * argv[])
 	lv_port_disp_init();
 	debug_printf("[DISP] lv_port_disp_init() returned!\r\n");
 
-	/* 5. 创建screen和obj（先于lv_timer_handler调用） */
-	debug_printf("\r\n[UI] Creating screen and object...\r\n");
-	lv_obj_t * scr = lv_scr_act();
-	debug_printf("[UI] Active screen: %p\r\n", (void *)scr);
+	/* 5. 初始化输入设备（GPIO 按键 → LVGL 键盘） */
+	debug_printf("[INDEV] Calling lv_port_indev_init()...\r\n");
+	lv_port_indev_init();
+	debug_printf("[INDEV] lv_port_indev_init() done\r\n");
 
-	/* 创建一个完全扁平的 obj，无圆角无阴影 */
-	lv_obj_t * obj = lv_obj_create(scr);
-	lv_obj_set_size(obj, 20, 10);
-	lv_obj_set_pos(obj, 2, 2);
-	/* 移除所有圆角和阴影 */
-	lv_obj_set_style_radius(obj, 0, 0);
-	lv_obj_set_style_shadow_width(obj, 0, 0);
-	lv_obj_set_style_border_width(obj, 0, 0);
-	debug_printf("[UI] Flat object created at (%d, %d)\r\n", 2, 2);
+	/* 6. 启动 LVGL 官方 Widgets Demo */
+	debug_printf("\r\n[DEMO] Starting lv_demo_widgets()...\r\n");
+	lv_demo_widgets();
+	debug_printf("[DEMO] lv_demo_widgets() created\r\n");
 
-	/* 强制刷新布局 */
-	debug_printf("[UI] Calling lv_obj_update_layout on screen...\r\n");
-	lv_obj_update_layout(scr);
-	debug_printf("[UI] lv_obj_update_layout returned\r\n");
-
-	/* 6. 调用 lv_timer_handler (有了UI对象后) */
-	debug_printf("\r\n[TEST] Calling lv_timer_handler() to render UI...\r\n");
+	/* 7. 首次渲染 */
 	flush_count = 0;
-	debug_printf("[TEST] About to call lv_timer_handler()...\r\n");
-
-	/* 测试栈深度 - 调用一个简单的递归函数 */
-	debug_printf("[TEST] Testing stack depth with simple recursion...\r\n");
-	extern void test_stack_recursion(int depth);
-	test_stack_recursion(0);
-
-	debug_printf("[TEST] Stack test complete, calling lv_timer_handler()...\r\n");
-
 	t0 = get_system_time_ms();
-	debug_printf("[TEST] Before lv_timer_handler() call, flush_count=%lu\r\n", (unsigned long)flush_count);
 	result = lv_timer_handler();
 	t1 = get_system_time_ms();
-	debug_printf("[TEST] lv_timer_handler() RETURNED! result=%lu elapsed=%lu ms flush=%lu\r\n",
-	             (unsigned long)result, (unsigned long)(t1 - t0), (unsigned long)flush_count);
+	debug_printf("[DEMO] First render: %lu ms, flush=%lu\r\n",
+	             (unsigned long)(t1 - t0), (unsigned long)flush_count);
 
-	/* 7. 进入主循环 */
+	/* 8. 进入主循环 */
 	debug_printf("\r\n[LOOP] Entering main loop...\r\n");
 	debug_printf("============================================\r\n\r\n");
 
 	while(1) {
 		loop_count++;
-		debug_printf("[LOOP] About to call lv_timer_handler(), loop=%lu\r\n", (unsigned long)loop_count);
 		lv_timer_handler();
-		debug_printf("[LOOP] lv_timer_handler() returned, loop=%lu\r\n", (unsigned long)loop_count);
 
-		if ((get_system_time_ms() - last_debug_time) >= 3000) {
+		if ((get_system_time_ms() - last_debug_time) >= 5000) {
 			last_debug_time = get_system_time_ms();
 			debug_printf("[LOOP] tick=%u loops=%lu flush=%lu\r\n",
 			             get_system_time_ms(),
 			             (unsigned long)loop_count,
 			             (unsigned long)flush_count);
 		}
-
-		mdelay(5);
 	}
 
 	return 0;

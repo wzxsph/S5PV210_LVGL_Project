@@ -27,9 +27,7 @@
       "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -g -Wall -O3 -I. -Iinclude -Iinclude/hardware -Iinclude/library -Isource/hardware -Ilvgl/src -Ilvgl -include lv_conf.h -E -dM lvgl/src/core/lv_global.h)",
       "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -I. -Iinclude -Iinclude/hardware -Iinclude/library -Isource/hardware -Ilvgl/src -Ilvgl -include lv_conf.h -E lvgl/src/core/lv_refr.c)",
       "Bash(arm-none-eabi-gcc -mcpu=cortex-a8 -I. -Iinclude -Iinclude/hardware -Iinclude/library -Isource/hardware -Ilvgl/src -Ilvgl -include lv_conf.h -E lvgl/src/core/lv_global.h)",
-      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\ihao8\\\\Desktop\\\\maybe\\\\LVGL_baseS5PV210_20260407\\\\auto_test.ps1\")",
-      "Bash(curl -o bfg.jar \"https://github.com/nicksulzer-nic/S5PV210_LVGL_Project/raw/main/bfg-1.14.0.jar\")",
-      "Bash(arm-none-eabi-nm output/template-framebuffer-gui.elf)"
+      "Skill(update-config)"
     ]
   }
 }

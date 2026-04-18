@@ -3,7 +3,7 @@ OUTPUT_ARCH(arm)
 ENTRY(_start)
 
 STACK_FIQ_SIZE 	= 0x0400;
-STACK_IRQ_SIZE 	= 0x0400;
+STACK_IRQ_SIZE 	= 0x1000;
 STACK_ABT_SIZE 	= 0x0400;
 STACK_UND_SIZE 	= 0x0400;
 STACK_SRV_SIZE 	= 0x8000;
@@ -51,18 +51,26 @@ SECTIONS
 		*(.sbss)
 		*(.COMMON)
 		PROVIDE (__bss_end = .);
+	} > ram
 
-		. = ALIGN(16384);
+	.mmu_table ALIGN(16384) (NOLOAD) :
+	{
 		PROVIDE (__mmu_table_start = .);
-		. = . + 16384;
+		. += 16384;
 		PROVIDE (__mmu_table_end = .);
+	} > ram
 
+	.heap ALIGN(8) (NOLOAD) :
+	{
 		. = ALIGN(8);
 		PROVIDE (__heap_start = .);
 		*(.heap)
 		. = ALIGN(8);
 		PROVIDE (__heap_end = .);
+	} > ram
 
+	.stack ALIGN(8) (NOLOAD) :
+	{
 		. = ALIGN(8);
 		PROVIDE (__stack_start = .);
 		PROVIDE (__stack_fiq_start = .);
@@ -87,6 +95,18 @@ SECTIONS
 		. = ALIGN(8);
 		PROVIDE (__stack_end = .);
 	} > ram
+
+	.fb_nocache 0x3E000000 (NOLOAD) :
+	{
+		. = ALIGN(1048576);
+		PROVIDE (__fb_nocache_start = .);
+		*(.fb_nocache)
+		*(.fb_nocache.*)
+		. = __fb_nocache_start + 0x00600000;
+		PROVIDE (__fb_nocache_end = .);
+	} > ram
+
+	ASSERT(__stack_end <= __fb_nocache_start, "RAM layout overflowed into framebuffer NC window")
 
 	/*
 	 * Stabs debugging sections.

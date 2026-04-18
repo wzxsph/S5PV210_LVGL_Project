@@ -1,0 +1,110 @@
+﻿================================================================================
+TEST REPORT - 20260418_195012
+================================================================================
+Serial Port : COM11
+Baud Rate   : 115200
+Status      : FAIL
+Start Time  : 2026-04-18 19:50:12
+Duration    : 199.1s
+================================================================================
+Flush Count : -1
+Missing     : [TEST] lv_timer_handler() RETURNED!; [DEMO] Switched to demo 2/5
+Failures    : ===== DATA ABORT =====; lv_timer_handler returned without a positive flush count
+Validation  : FAIL
+================================================================================
+
+SERIAL OUTPUT:
+--------------------------------------------------------------------------------
+go 0x30000000
+## Starting application at 0x30000000 ...
+
+============================================
+  S5PV210 LVGL v9 Application Starting...
+  Build: Apr 18 2026 19:32:04
+============================================
+[INIT] Starting system initialization...
+[INIT] malloc_init() done
+[INIT] s5pv210_clk_initial() done
+[INIT] Cache and MMU enabled for LVGL performance
+[INIT] s5pv210_irq_initial() done
+[INIT] s5pv210_tick_initial() done
+[INIT] s5pv210_tick_delay_initial() done
+[INIT] s5pv210_serial_initial() done
+[INIT] UART2 configured for debug @ 115200 baud
+[INIT] MMU/cache enabled by start.S
+[INIT]   SCTLR=0x00c5187d TTBR0=0x307d8000 DACR=0xffffffff
+[INIT]   MMU table: 0x307d8000 - 0x307dc000
+[INIT]   FB NC window: 0x3e000000 - 0x3e600000
+[INIT] s5pv210_fb_initial() done - LCD should be ON now
+[INIT] Framebuffer base: 0x3e000000
+[INIT] System initialization COMPLETE!
+[INIT] ============================================
+
+[LVGL] Calling lv_init()...
+[LVGL] lv_init() SUCCESS!
+[LVGL] Registering log callback...
+[LVGL] Log callback registered
+[LVGL] Registering tick callback (jiffies->ms)...
+[LVGL] Tick callback registered. Current time: 490 ms
+[LVGL] Memory status:
+[LVGL]   Total: 4192128 bytes
+[LVGL]   Free: 4190012 bytes
+[LVGL]   Used: 2116 bytes (1%)
+
+[DISP] Calling lv_port_disp_init()...
+
+[DISP_INIT] ======== Display Driver Initialization =======
+[DISP_INIT] Panel Resolution: 1024x600
+[DISP_INIT] Render mode: PARTIAL (120-line cached + shadow FB)
+[DISP_INIT] Display created
+[DISP_INIT] Render buffer: 0x3035b940 (491520 bytes, 120 lines)
+[DISP_INIT] Shadow FB:     0x30103940 (2457600 bytes, anti-tear)
+[DISP_INIT] Flush callback registered
+[DISP_INIT] ======== Display Init COMPLETE =======
+
+[DISP] lv_port_disp_init() returned!
+[INDEV] Calling lv_port_indev_init()...
+[INDEV] lv_port_indev_init() done
+
+[DEMO] Starting lv_demo_widgets()...
+[DEMO] lv_demo_widgets() created
+[DEMO] First render: 300 ms, flush=5
+
+[LOOP] Entering main loop...
+============================================
+
+[LOOP] tick=5000 loops=4405712 flush=33
+[LOOP] tick=10010 loops=9457693 flush=67
+[LOOP] tick=15010 loops=14508675 flush=99
+[LOOP] tick=20010 loops=19436136 flush=133
+[LOOP] tick=25010 loops=24359231 flush=167
+[LOOP] tick=30010 loops=29338005 flush=202
+[LOOP] tick=35060 loops=32751595 flush=258
+[LOOP] tick=40060 loops=37560086 flush=301
+[LOOP] tick=45060 loops=42228871 flush=345
+[LOOP] tick=50060 loops=45428253 flush=396
+[LOOP] tick=55060 loops=47538273 flush=429
+[LOOP] tick=60060 loops=50330103 flush=467
+[LOOP] tick=65060 loops=54638059 flush=508
+[LOOP] tick=70060 loops=56687636 flush=545
+[LOOP] tick=75080 loops=60641705 flush=583
+[LOOP] tick=80140 loops=63565395 flush=621
+[LOOP] tick=85140 loops=66266653 flush=658
+[LOOP] tick=90160 loops=69477774 flush=707
+[LOOP] tick=95160 loops=71868642 flush=762
+[LOOP] tick=100330 loops=74544428 flush=808
+[LOOP] tick=105330 loops=78190171 flush=849
+[LOOP] tick=111250 loops=81603770 flush=888
+[LOOP] tick=116250 loops=85279448 flush=923
+
+
+===== DATA ABORT =====
+LR (return addr): 0x
+Real PC (LR-8): 0x
+DFAR (fault addr): 0x
+SP at abort: 0x
+======================
+
+
+--------------------------------------------------------------------------------
+END OF REPORT
