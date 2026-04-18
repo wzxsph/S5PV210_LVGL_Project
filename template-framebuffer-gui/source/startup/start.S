@@ -14,14 +14,10 @@
 .equ	MMU_SECT_MMIO_START,	0xe00
 .equ	MMU_SECT_MMIO_END,		0xfff
 
-.equ	UART2_UTRSTAT,			0xE2900810
-.equ	UART2_UTXH,				0xE2900820
-.equ	UART_UTRSTAT_TXE,		(1 << 2)
-
 /* First-level section attributes, kept aligned with the known-good S5PV210 style
  * used in the reference code the project is following. */
 .equ	MMU_DESC_SDRAM_CACHED,	0x00001c0e	/* RW, executable WB/WA cached section */
-.equ	MMU_DESC_FB_NOCACHE,	0x00000c12	/* RW, uncached section */
+.equ	MMU_DESC_FB_NOCACHE,	0x00001c12	/* RW, executable-never normal non-cacheable section */
 .equ	MMU_DESC_MMIO_DEVICE,	0x00000c12	/* RW, uncached/device section */
 
 /*
@@ -115,14 +111,8 @@ clear_bss:
 	mov r2, #0x00000000
 	bl	mem_clear
 
-	mov	r0, #'S'
-	bl	uart2_putc
-
 	/* build first-level page table and enable MMU/cache */
 	bl	mmu_init
-
-	mov	r0, #'M'
-	bl	uart2_putc
 
 	/* jump to main fuction */
 	mov r0, #0;
@@ -164,21 +154,6 @@ init_stacks:
 	msr	cpsr_cxsf, r1
 	ldr	sp, _stack_srv_end
 	bic	sp, sp, #7		/* Enforce 8-byte alignment */
-	mov	pc, lr
-
-/*
- * write one character to UART2 using the bootloader's current setup
- *
- * r0: ASCII character to send
- */
-uart2_putc:
-	ldr	r1, =UART2_UTRSTAT
-1:
-	ldr	r2, [r1]
-	tst	r2, #UART_UTRSTAT_TXE
-	beq	1b
-	ldr	r1, =UART2_UTXH
-	strb	r0, [r1]
 	mov	pc, lr
 
 /*
@@ -241,9 +216,6 @@ invalidate_dcache_all:
 mmu_init:
 	stmdb	sp!, {lr}
 
-	mov	r0, #'0'
-	bl	uart2_putc
-
 	/* start from a known CP15 state in case U-Boot left caches enabled */
 	mrc	p15, 0, r0, c1, c0, 0
 	bic	r0, r0, #(1 << 0)		/* M */
@@ -260,9 +232,6 @@ mmu_init:
 	ldr	r1, =__mmu_table_end
 	mov	r2, #0
 	bl	mem_clear
-
-	mov	r0, #'1'
-	bl	uart2_putc
 
 	/* 0x30000000 - 0x4fffffff: normal cached SDRAM */
 	ldr	r0, =__mmu_table_start
@@ -285,9 +254,6 @@ mmu_init:
 	ldr	r3, =MMU_DESC_MMIO_DEVICE
 	bl	map_sections
 
-	mov	r0, #'2'
-	bl	uart2_putc
-
 	dsb
 
 	/* TTBR0 only, short-descriptor format */
@@ -299,17 +265,11 @@ mmu_init:
 	ldr	r0, =0xffffffff
 	mcr	p15, 0, r0, c3, c0, 0		/* DACR: manager access */
 
-	mov	r0, #'3'
-	bl	uart2_putc
-
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c5, 0		/* invalidate I-cache */
 	mcr	p15, 0, r0, c7, c5, 6		/* invalidate branch predictor array */
 	mcr	p15, 0, r0, c8, c7, 0		/* invalidate unified TLB */
 	bl	invalidate_dcache_all
-
-	mov	r0, #'4'
-	bl	uart2_putc
 
 	/* enable MMU first so we can isolate which later cache step breaks boot */
 	mrc	p15, 0, r0, c1, c0, 0
@@ -319,18 +279,12 @@ mmu_init:
 	dsb
 	isb
 
-	mov	r0, #'5'
-	bl	uart2_putc
-
 	/* turn on I-cache next */
 	mrc	p15, 0, r0, c1, c0, 0
 	orr	r0, r0, #(1 << 12)		/* I */
 	mcr	p15, 0, r0, c1, c0, 0
 	dsb
 	isb
-
-	mov	r0, #'6'
-	bl	uart2_putc
 
 	/* then branch prediction */
 	mrc	p15, 0, r0, c1, c0, 0
@@ -339,18 +293,12 @@ mmu_init:
 	dsb
 	isb
 
-	mov	r0, #'7'
-	bl	uart2_putc
-
 	/* finally enable D-cache */
 	mrc	p15, 0, r0, c1, c0, 0
 	orr	r0, r0, #(1 << 2)		/* C */
 	mcr	p15, 0, r0, c1, c0, 0
 	dsb
 	isb
-
-	mov	r0, #'8'
-	bl	uart2_putc
 
 	ldmia	sp!, {pc}
 

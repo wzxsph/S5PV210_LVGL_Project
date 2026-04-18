@@ -462,18 +462,18 @@ static void do_system_initial(void)
 	s5pv210_serial_setup(DEBUG_UART_CH, DEBUG_BAUD, DATA_BITS_8, PARITY_NONE, STOP_BITS_1);
 	debug_printf("[INIT] UART2 configured for debug @ 115200 baud\r\n");
 	debug_printf("[INIT] MMU/cache enabled by start.S\r\n");
-	debug_printf("[INIT]   SCTLR=0x%08X TTBR0=0x%08X DACR=0x%08X\r\n",
+	debug_printf("[INIT]   SCTLR=0x%08x TTBR0=0x%08x DACR=0x%08x\r\n",
 	             read_sctlr(), read_ttbr0(), read_dacr());
-	debug_printf("[INIT]   MMU table: 0x%08X - 0x%08X\r\n",
+	debug_printf("[INIT]   MMU table: 0x%08x - 0x%08x\r\n",
 	             (unsigned int)&__mmu_table_start, (unsigned int)&__mmu_table_end);
-	debug_printf("[INIT]   FB NC window: 0x%08X - 0x%08X\r\n",
+	debug_printf("[INIT]   FB NC window: 0x%08x - 0x%08x\r\n",
 	             (unsigned int)&__fb_nocache_start, (unsigned int)&__fb_nocache_end);
 
 	s5pv210_fb_initial();
 	debug_printf("[INIT] s5pv210_fb_initial() done - LCD should be ON now\r\n");
 	{
 		struct surface_t * surface = s5pv210_screen_surface();
-		debug_printf("[INIT] Framebuffer base: 0x%08X\r\n",
+		debug_printf("[INIT] Framebuffer base: 0x%08x\r\n",
 		             surface ? (unsigned int)surface->pixels : 0);
 	}
 
